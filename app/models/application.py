@@ -6,7 +6,7 @@ from vacancy import Vacancy
 from user import User
 
 class Application(BaseModelCreatedUpdated):
-    __tablename__ = "user"
+    __tablename__ = "application"
     
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), primary_key=True)
     vacancy_id: Mapped[int] = mapped_column(ForeignKey("vacancy.id"), primary_key=True)
