@@ -9,7 +9,7 @@ class Skill(BaseModelCreated):
     __tablename__ = "skill"
     
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
-    category: Mapped[str] = mapped_column(nullable=True)
+    category: Mapped[str | None] = mapped_column(nullable=True)
 
     user_skills: Mapped[List["UserSkills"]] = relationship(back_populates="skill")
     vacancy_skills: Mapped[List["VacancySkills"]] = relationship(back_populates="skill")

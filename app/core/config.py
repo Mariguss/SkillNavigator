@@ -2,7 +2,7 @@ import os
 from typing import List
 
 from dotenv import load_dotenv
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 load_dotenv()
 
@@ -15,7 +15,7 @@ class Configs(BaseSettings):
     API: str = "/api"
     API_V1_STR: str = "/api/v1"
     API_V2_STR: str = "/api/v2"
-    PROJECT_NAME: str = "fca-api"
+    PROJECT_NAME: str = "skillnavigator"
     ENV_DATABASE_MAPPER: dict = {
         "prod": "fca",
         "stage": "stage-fca",
@@ -45,7 +45,7 @@ class Configs(BaseSettings):
     DB_USER: str = os.getenv("DB_USER")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD")
     DB_HOST: str = os.getenv("DB_HOST")
-    DB_PORT: str = os.getenv("DB_PORT", "3306")
+    DB_PORT: str = os.getenv("DB_PORT", "5432")
     DB_ENGINE: str = DB_ENGINE_MAPPER.get(DB, "postgresql")
 
     DATABASE_URI_FORMAT: str = "{db_engine}://{user}:{password}@{host}:{port}/{database}"

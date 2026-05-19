@@ -8,6 +8,6 @@ class Company(BaseModelCreatedUpdated):
     __tablename__ = "company"
     
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
-    site_url: Mapped[str] = mapped_column(nullable=True)
+    site_url: Mapped[str | None] = mapped_column(nullable=True)
 
     vacancies: Mapped[List["Vacancy"]] = relationship(back_populates="company")

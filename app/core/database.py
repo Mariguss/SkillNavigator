@@ -41,3 +41,15 @@ class Database:
             raise
         finally:
             session.close()
+
+
+from app.core.config import configs
+from app.core.database import Database
+
+# Создаем единственный экземпляр класса Database
+db_instance = Database(configs.DATABASE_URI)
+
+# Эта функция будет выдавать сессию для каждого запроса API
+def get_db():
+    with db_instance.session() as session:
+        yield session
