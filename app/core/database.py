@@ -1,27 +1,20 @@
-from contextlib import AbstractContextManager, contextmanager
-from typing import Any, Callable
+from contextlib import contextmanager
+from typing import Generator
 
-from sqlalchemy import create_engine, orm
-from sqlalchemy.ext.declarative import as_declarative, declared_attr
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker, Session
 
-
-@as_declarative()
-class BaseModel:
-    id: Any
-    __name__: str
-
-    # Generate __tablename__ automatically
-    @declared_attr
-    def __tablename__(cls) -> str:
-        return cls.__name__.lower()
-
+from models.base_model import Base
 
 class Database:
     def __init__(self, db_url: str) -> None:
-        self._engine = create_engine(db_url, echo=True)
-        self._session_factory = orm.scoped_session(
-            orm.sessionmaker(
+
+        # Для SQLite добавляем check_same_thread=False, для остальных БД это проигнорируется
+        connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
+
+        self._engine = create_engine(db_url, echo=True, connect_args=connect_args)
+        self._session_factory = scoped_session(
+            sessionmaker(
                 autocommit=False,
                 autoflush=False,
                 bind=self._engine,
@@ -29,13 +22,17 @@ class Database:
         )
 
     def create_database(self) -> None:
-        BaseModel.metadata.create_all(self._engine)
+        """Создает таблицы. Удобно для локальных тестов."""
+        Base.metadata.create_all(self._engine)
 
     @contextmanager
-    def session(self) -> Callable[..., AbstractContextManager[Session]]:
+    def session(self) -> Generator[Session, None, None]:
+        """Контекстный менеджер сессии для использования в обычных Python-скриптах/сервисах."""
+
         session: Session = self._session_factory()
         try:
             yield session
+            session.commit()
         except Exception:
             session.rollback()
             raise
@@ -44,12 +41,17 @@ class Database:
 
 
 from app.core.config import configs
-from app.core.database import Database
 
 # Создаем единственный экземпляр класса Database
 db_instance = Database(configs.DATABASE_URI)
 
 # Эта функция будет выдавать сессию для каждого запроса API
 def get_db():
-    with db_instance.session() as session:
-        yield session
+    """Отдает сессию в роуты FastAPI и правильно закрывает её после ответа сервера."""
+    
+    # Используем фабрику напрямую, чтобы FastAPI сам контролировал жизненный цикл
+    db = db_instance._session_factory()
+    try:
+        yield db
+    finally:
+        db.close()
