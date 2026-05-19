@@ -1,11 +1,11 @@
-from base_model import BaseModel
+from base_model import BaseModelCreatedUpdated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from sqlalchemy import Text
 from vacancy import Vacancy
 from user import User
 
-class Application(BaseModel):
+class Application(BaseModelCreatedUpdated):
     __tablename__ = "user"
     
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), primary_key=True)

@@ -1,4 +1,4 @@
-from base_model import BaseModel
+from base_model import BaseModelCreatedUpdated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey, Text
 from typing import List
@@ -6,7 +6,7 @@ from company import Company
 from application import Application
 from vacancy_skills import VacancySkills
 
-class Vacancy(BaseModel):
+class Vacancy(BaseModelCreatedUpdated):
     __tablename__ = "vacancy"
     
     company_id: Mapped[int] = mapped_column(ForeignKey("company.id"), primary_key=True)

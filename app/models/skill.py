@@ -1,11 +1,11 @@
-from base_model import BaseModel
+from base_model import BaseModelCreated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import List
 from user_skills import UserSkills
 from vacancy_skills import VacancySkills
 
-class Skill(BaseModel):
+class Skill(BaseModelCreated):
     __tablename__ = "skill"
     
     name: Mapped[str] = mapped_column(unique=True, nullable=False)

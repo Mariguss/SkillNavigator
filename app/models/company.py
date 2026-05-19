@@ -1,10 +1,10 @@
-from base_model import BaseModel
+from base_model import BaseModelCreatedUpdated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from typing import List
 from vacancy import Vacancy
 
-class Company(BaseModel):
+class Company(BaseModelCreatedUpdated):
     __tablename__ = "company"
     
     name: Mapped[str] = mapped_column(unique=True, nullable=False)

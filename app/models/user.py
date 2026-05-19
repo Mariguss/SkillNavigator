@@ -1,11 +1,11 @@
-from base_model import BaseModel
+from base_model import BaseModelCreatedUpdated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import List
 from application import Application
 from user_skills import UserSkills
 
-class User(BaseModel):
+class User(BaseModelCreatedUpdated):
     __tablename__ = "user"
 
     login: Mapped[str] = mapped_column(unique=True)
