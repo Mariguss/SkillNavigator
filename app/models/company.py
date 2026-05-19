@@ -1,8 +1,11 @@
-from base_model import BaseModelCreatedUpdated
+from app.models.base_model import BaseModelCreatedUpdated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
-from typing import List
-from vacancy import Vacancy
+
+from typing import List, TYPE_CHECKING  
+
+if TYPE_CHECKING:
+    from app.models.vacancy import Vacancy
 
 class Company(BaseModelCreatedUpdated):
     __tablename__ = "company"
@@ -10,4 +13,4 @@ class Company(BaseModelCreatedUpdated):
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
     site_url: Mapped[str | None] = mapped_column(nullable=True)
 
-    vacancies: Mapped[List["Vacancy"]] = relationship(back_populates="company")
+    vacancies: Mapped[List["Vacancy"]] = relationship("Vacancy", back_populates="company")

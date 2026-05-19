@@ -1,9 +1,13 @@
-from base_model import BaseModelCreatedUpdated
+from app.models.base_model import BaseModelCreatedUpdated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from sqlalchemy import Text
-from vacancy import Vacancy
-from user import User
+
+from typing import TYPE_CHECKING  
+
+if TYPE_CHECKING:
+    from app.models.vacancy import Vacancy
+    from app.models.user import User
 
 class Application(BaseModelCreatedUpdated):
     __tablename__ = "application"
@@ -15,5 +19,5 @@ class Application(BaseModelCreatedUpdated):
     backup_vacancy_name: Mapped[str] = mapped_column(nullable=False)
     notes: Mapped[str] = mapped_column(Text,nullable=True)
 
-    vacancy: Mapped["Vacancy"] = relationship(back_populates="applications")
-    user: Mapped["User"] = relationship(back_populates="applications")
+    vacancy: Mapped["Vacancy"] = relationship("Vacancy", back_populates="applications")
+    user: Mapped["User"] = relationship("User", back_populates="applications")
