@@ -4,7 +4,7 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker, Session
 
-from models.base_model import Base
+from app.models.base_model import Base
 
 class Database:
     def __init__(self, db_url: str) -> None:

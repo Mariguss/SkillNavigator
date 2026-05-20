@@ -1,14 +1,12 @@
 from datetime import datetime, timedelta
-
+import bcrypt
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
-from passlib.context import CryptContext
 
 from app.core.config import configs
 from app.core.exceptions import AuthError
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 
 
@@ -23,12 +21,23 @@ def create_access_token(subject: dict, expires_delta: timedelta = None) -> (str,
     return encoded_jwt, expiration_datetime
 
 
+# ИСПРАВЛЕНО: Прямая проверка пароля через чистый bcrypt без passlib
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'), 
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 
+# ИСПРАВЛЕНО: Генерация хэша через чистый bcrypt без passlib
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def decode_jwt(token: str) -> dict:

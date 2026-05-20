@@ -11,7 +11,7 @@ class SignIn(BaseModel):
 
 
 class SignUp(BaseModel):
-    email: EmailStr  # Автоматическая валидация корректности почты
+    email: EmailStr
     password: str = Field(..., min_length=6)
     login: str = Field(..., min_length=3, max_length=50)
 
