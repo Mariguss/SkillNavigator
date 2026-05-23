@@ -17,6 +17,7 @@ def get_current_user(
     token: str = Depends(JWTBearer()),
     service: UserService = Depends(Provide[Container.user_service]),
 ) -> User:
+    print(token)
     try:
         payload = jwt.decode(token, configs.SECRET_KEY, algorithms=[ALGORITHM])
         token_data = Payload(**payload)

@@ -29,5 +29,5 @@ class SignInResponse(BaseModel):
     expiration: datetime
     user_info: User
 
-class FindUserByLogin(BaseModel)
+class FindUserByLogin(BaseModel):
     login__eq: str 

@@ -64,7 +64,7 @@ class BaseRepository:
 
     def create(self, schema):
         with self.session_factory() as session:
-            new_object = self.model(**schema.dict()) # Распаковываем схему в модель БД
+            new_object = self.model(**schema.dict(exclude_none=True)) # Распаковываем схему в модель БД
             try:
                 session.add(new_object)
                 session.commit()
@@ -96,5 +96,5 @@ class BaseRepository:
             object = session.query(self.model).filter(self.model.id == id).first()
             if not object:
                 raise NotFoundError(detail=f"not found id : {id}")
-            session.delete(object)
+            session.delete(query)
             session.commit()

@@ -52,7 +52,7 @@ class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
         # auto_error=True заставляет FastAPI автоматически выкидывать ошибку, 
         # если клиент вообще забыл прикрепить токен
-        super().__init__(auto_error=auto_error)
+        super(JWTBearer, self).__init__(auto_error=auto_error)
 
     async def __call__(self, request: Request):
         
@@ -60,7 +60,7 @@ class JWTBearer(HTTPBearer):
         credentials: HTTPAuthorizationCredentials = await super().__call__(request)
         
         if credentials:
-            if credentials.scheme is not "Bearer":
+            if credentials.scheme != "Bearer":
                 raise AuthError(detail="Invalid authentication scheme.")
             if not self.verify_jwt(credentials.credentials):
                 raise AuthError(detail="Invalid token or expired token.")

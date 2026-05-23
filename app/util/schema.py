@@ -1,4 +1,5 @@
 from pydantic._internal._model_construction import ModelMetaclass
+from typing import Optional
 
 class AllOptional(ModelMetaclass):
     def __new__(mcs, name, bases, namespaces, **kwargs):
@@ -10,6 +11,9 @@ class AllOptional(ModelMetaclass):
             # Если у поля не задано значение по умолчанию, делаем его None
             if field_info.default == field_info.default_factory:
                 field_info.default = None
+                # ВАЖНО ДЛЯ PYDANTIC V2: Обновляем аннотацию типа данных, 
+                # чтобы валидатор официально разрешил принимать None!
+                field_info.annotation = Optional[field_info.annotation]
                 
         # Пересобираем модель с учетом обновленных дефолтов
         cls.model_rebuild(force=True)

@@ -1,17 +1,13 @@
 from typing import List, Optional
-
 from pydantic import BaseModel, EmailStr
-
 from app.schemas.base_schema import FindBase, ModelBaseInfo, SearchOptions
 from app.util.schema import AllOptional
-
 
 class BaseUser(BaseModel):
     login: str
     email: EmailStr
     is_superuser: bool = False
-
-    # Вместо class Config теперь пишется обычная переменная:
+    
     model_config = {"from_attributes": True} 
 
 
@@ -20,16 +16,30 @@ class BaseUserWithPassword(BaseUser):
 
 
 class User(ModelBaseInfo, BaseUser, metaclass=AllOptional):
-    ...
+    pass
 
 
 class FindUser(FindBase, BaseUser, metaclass=AllOptional):
-    login__eq: str
-    email__eq: str
+    login__eq: str | None = None
+    email__eq: str | None = None
 
 
-class UpsertUser(BaseUser, metaclass=AllOptional):
-    password: str
+class UpsertUser(BaseModel):
+    login: str | None = None
+    email: EmailStr | None = None
+    is_superuser: bool | None = None
+    password: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class UpsertUserInDB(BaseModel):
+    login: str | None = None
+    email: EmailStr | None = None
+    is_superuser: bool | None = None
+    password_hash: str | None = None
+
+    model_config = {"from_attributes": True}
 
 
 class FindUserResult(BaseModel):
