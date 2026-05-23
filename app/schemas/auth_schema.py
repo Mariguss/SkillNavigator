@@ -28,3 +28,6 @@ class SignInResponse(BaseModel):
     token_type: str = "bearer"  # Стандарт для OAuth2/JWT в FastAPI
     expiration: datetime
     user_info: User
+
+class FindUserByLogin(BaseModel)
+    login__eq: str 

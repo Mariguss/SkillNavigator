@@ -45,6 +45,8 @@ from app.core.config import configs
 # Создаем единственный экземпляр класса Database
 db_instance = Database(configs.DATABASE_URI)
 
+
+# !!! Перенести в класс
 # Эта функция будет выдавать сессию для каждого запроса API
 def get_db():
     """Отдает сессию в роуты FastAPI и правильно закрывает её после ответа сервера."""

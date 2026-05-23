@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import bcrypt
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import jwt
+from jose import jwt # заменить на библиотеку PyJWT 
 
 from app.core.config import configs
 from app.core.exceptions import AuthError
@@ -50,12 +50,17 @@ def decode_jwt(token: str) -> dict:
 
 class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
-        super(JWTBearer, self).__init__(auto_error=auto_error)
+        # auto_error=True заставляет FastAPI автоматически выкидывать ошибку, 
+        # если клиент вообще забыл прикрепить токен
+        super().__init__(auto_error=auto_error)
 
     async def __call__(self, request: Request):
-        credentials: HTTPAuthorizationCredentials = await super(JWTBearer, self).__call__(request)
+        
+        # Он идет в заголовки запроса и вытаскивает оттуда строчку "Authorization: Bearer <токен>"
+        credentials: HTTPAuthorizationCredentials = await super().__call__(request)
+        
         if credentials:
-            if not credentials.scheme == "Bearer":
+            if credentials.scheme is not "Bearer":
                 raise AuthError(detail="Invalid authentication scheme.")
             if not self.verify_jwt(credentials.credentials):
                 raise AuthError(detail="Invalid token or expired token.")
@@ -67,7 +72,7 @@ class JWTBearer(HTTPBearer):
         is_token_valid: bool = False
         try:
             payload = decode_jwt(jwt_token)
-        except Exception as e:
+        except:
             payload = None
         if payload:
             is_token_valid = True

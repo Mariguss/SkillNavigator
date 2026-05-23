@@ -28,10 +28,10 @@ class Container(containers.DeclarativeContainer):
     # Сервисы
     user_service = providers.Factory(
         UserService,
-        user_repository=user_repository,
+        repository=user_repository,
     )
 
     auth_service = providers.Factory(
         AuthService,
-        user_repository=user_repository,
+        repository=user_repository,
     )

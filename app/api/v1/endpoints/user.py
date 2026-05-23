@@ -8,7 +8,11 @@ from app.schemas.base_schema import Blank
 from app.schemas.user_schema import FindUser, FindUserResult, UpsertUser, User
 from app.services.user_service import UserService
 
-router = APIRouter(prefix="/user", tags=["user"], dependencies=[Depends(JWTBearer())])
+router = APIRouter(
+    prefix="/user", 
+    tags=["user"], 
+    dependencies=[Depends(JWTBearer())]
+)
 
 
 @router.get("", response_model=FindUserResult)

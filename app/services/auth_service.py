@@ -1,48 +1,38 @@
 from datetime import timedelta
 from typing import List
-from fastapi import HTTPException
 
 from app.core.config import configs
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
 from app.repository.user_repository import UserRepository
-from app.schemas.auth_schema import Payload, SignIn, SignUp
-from app.schemas.user_schema import FindUser
+from app.schemas.auth_schema import Payload, SignIn, SignUp, FindUserByLogin
+from app.schemas.user_schema import UpsertUser
 from app.services.base_service import BaseService
+from app.core.exceptions import WrongCredentialsError
 
 
 class AuthService(BaseService):
-    def __init__(self, user_repository: UserRepository):
-        self.user_repository = user_repository
-        super().__init__(user_repository)
+    def __init__(self, repository: UserRepository):
+        self.repository = repository
+        super().__init__(repository)
 
     def sign_in(self, sign_in_info: SignIn):
-        # 1. Создаем базовый объект без валидации
-        find_user = FindUser.model_construct(
-            login=None,
-            email=None,
-            ordering=None,
-            page=1,
-            page_size=1
+
+        find_user = FindUserByLogin(
+            login__eq=sign_in_info.login
         )
-        # 2. Насильно прописываем параметры в __dict__
-        find_user.__dict__["login__eq"] = sign_in_info.login
         
-        # Передаем None, чтобы убрать фильтрацию по статусу админа в SQL-запросе
-        find_user.__dict__["is_superuser"] = None 
-        
-        # Дальше твой оригинальный код без изменений:
-        user_list_result = self.user_repository.read_by_options(find_user)
+        user_list_result = self.repository.read_by_options(find_user)
         users: List[User] = user_list_result["founds"]
         
         if len(users) < 1:
-            raise HTTPException(status_code=400, detail="Incorrect login or password")
-        
+            raise WrongCredentialsError(detail="Incorrect login or password")
+
         found_user = users[0]
         
         if not verify_password(sign_in_info.password, found_user.password_hash):
-            raise HTTPException(status_code=400, detail="Incorrect login or password")
-        
+            raise WrongCredentialsError(detail="Incorrect login or password")
+
         payload = Payload(
             id=found_user.id,
             email=found_user.email,
@@ -60,18 +50,10 @@ class AuthService(BaseService):
         }
 
     def sign_up(self, user_info: SignUp):
-        hashed_password = get_password_hash(user_info.password)
         
-        db_user = User(
-            login=user_info.login,
-            email=user_info.email,
-            password_hash=hashed_password,
-            is_superuser=False,
-        )
-
-        with self.user_repository.session_factory() as session:
-            session.add(db_user)
-            session.commit()
-            session.refresh(db_user)
-            
-        return db_user
+        user_data = user_info.dict(exclude_none=True)
+        if "password" in user_data:
+            password = user_data.pop("password")
+            user_data["password_hash"] = get_password_hash(password)
+        updated_schema = UpsertUser(**user_data)
+        return self.repository.create(updated_schema)

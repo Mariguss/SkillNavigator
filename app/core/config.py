@@ -41,7 +41,7 @@ class Configs(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 60 minutes * 24 hours * 30 days = 30 days
 
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = ["*"]
+    # BACKEND_CORS_ORIGINS: List[str] = ["*"]
 
     # database
     DB: str = os.getenv("DB", "sqlite")
@@ -64,7 +64,7 @@ class Configs(BaseSettings):
     PAGE_SIZE: int = 20
     ORDERING : str= "-id"
 
-    model_config = SettingsConfigDict(case_sensitive=True)
+    model_config: SettingsConfigDict = SettingsConfigDict(case_sensitive=True)
 
 
 class TestConfigs(Configs):

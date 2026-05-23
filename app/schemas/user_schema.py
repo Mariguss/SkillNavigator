@@ -11,8 +11,8 @@ class BaseUser(BaseModel):
     email: EmailStr
     is_superuser: bool = False
 
-    class Config:
-        from_attributes = True
+    # Вместо class Config теперь пишется обычная переменная:
+    model_config = {"from_attributes": True} 
 
 
 class BaseUserWithPassword(BaseUser):
@@ -24,12 +24,12 @@ class User(ModelBaseInfo, BaseUser, metaclass=AllOptional):
 
 
 class FindUser(FindBase, BaseUser, metaclass=AllOptional):
-    login__eq: str | None = None
-    email__eq: str | None = None
+    login__eq: str
+    email__eq: str
 
 
 class UpsertUser(BaseUser, metaclass=AllOptional):
-    password: str | None = None
+    password: str
 
 
 class FindUserResult(BaseModel):

@@ -27,15 +27,19 @@ class BaseRepository:
             page_size = schema_as_dict.get("page_size", configs.PAGE_SIZE)
             filter_options = dict_to_sqlalchemy_filter_options(self.model, schema.dict(exclude_none=True))
             query = session.query(self.model)
+            
             if eager:
                 for eager in getattr(self.model, "eagers", []):
                     query = query.options(joinedload(getattr(self.model, eager)))
+            
             filtered_query = query.filter(filter_options)
             query = filtered_query.order_by(order_query)
+            
             if page_size == "all":
                 query = query.all()
             else:
                 query = query.limit(page_size).offset((page - 1) * page_size).all()
+            
             total_count = filtered_query.count()
             return {
                 "founds": query,
@@ -60,14 +64,14 @@ class BaseRepository:
 
     def create(self, schema):
         with self.session_factory() as session:
-            query = self.model(**schema.dict())
+            new_object = self.model(**schema.dict()) # Распаковываем схему в модель БД
             try:
-                session.add(query)
+                session.add(new_object)
                 session.commit()
-                session.refresh(query)
+                session.refresh(new_object) # Обновляем объект, чтобы у него появился id из базы
             except IntegrityError as e:
                 raise DuplicatedError(detail=str(e.orig))
-            return query
+            return new_object
 
     def update(self, id: int, schema):
         with self.session_factory() as session:
@@ -89,8 +93,8 @@ class BaseRepository:
 
     def delete_by_id(self, id: int):
         with self.session_factory() as session:
-            query = session.query(self.model).filter(self.model.id == id).first()
-            if not query:
+            object = session.query(self.model).filter(self.model.id == id).first()
+            if not object:
                 raise NotFoundError(detail=f"not found id : {id}")
-            session.delete(query)
+            session.delete(object)
             session.commit()

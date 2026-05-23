@@ -31,6 +31,5 @@ class FindDateRange(BaseModel):
     created_at__gt: str
     created_at__gte: str
 
-
 class Blank(BaseModel):
     pass
