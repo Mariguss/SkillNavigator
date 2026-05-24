@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, status
 from app.core.container import Container
 from app.core.dependencies import get_current_super_user
 from app.core.security import JWTBearer
-from app.schemas.base_schema import Blank
 from app.schemas.user_schema import FindUser, FindUserResult, UpsertUser, User
 from app.services.user_service import UserService
 

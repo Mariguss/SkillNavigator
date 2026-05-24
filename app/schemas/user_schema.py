@@ -19,7 +19,7 @@ class User(ModelBaseInfo, BaseUser, metaclass=AllOptional):
     pass
 
 
-class FindUser(FindBase, BaseUser, metaclass=AllOptional):
+class FindUser(FindBase):
     login__eq: str | None = None
     email__eq: str | None = None
 
@@ -30,7 +30,7 @@ class UpsertUser(BaseModel):
     is_superuser: bool | None = None
     password: str | None = None
 
-    model_config = {"from_attributes": True}
+    # model_config = {"from_attributes": True}
 
 
 class UpsertUserInDB(BaseModel):

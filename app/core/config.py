@@ -16,6 +16,7 @@ class Configs(BaseSettings):
     API_V1_STR: str = "/api/v1"
     # API_V2_STR: str = "/api/v2"
     PROJECT_NAME: str = "skillnavigator"
+    API_HH_RU: str = "https://hh.ru"
     
     ENV_DATABASE_MAPPER: dict = {
         "prod": "fca",

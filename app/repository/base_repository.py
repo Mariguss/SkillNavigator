@@ -70,7 +70,7 @@ class BaseRepository:
                 session.commit()
                 session.refresh(new_object) # Обновляем объект, чтобы у него появился id из базы
             except IntegrityError as e:
-                raise DuplicatedError(detail=str(e.orig))
+                raise DuplicatedError(detail="Record with this unique attribute already exists.")
             return new_object
 
     def update(self, id: int, schema):
@@ -96,5 +96,5 @@ class BaseRepository:
             object = session.query(self.model).filter(self.model.id == id).first()
             if not object:
                 raise NotFoundError(detail=f"not found id : {id}")
-            session.delete(query)
+            session.delete(object)
             session.commit()

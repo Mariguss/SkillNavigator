@@ -1,7 +1,9 @@
 from dependency_injector import containers, providers
 
 from app.core.database import db_instance
+from app.repository.company_repository import CompanyRepository
 from app.repository.user_repository import UserRepository
+from app.services.company_service import CompanyService
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 
@@ -12,6 +14,7 @@ class Container(containers.DeclarativeContainer):
         modules=[
             "app.api.v1.endpoints.auth",
             "app.api.v1.endpoints.user",
+            "app.api.v1.endpoints.company",
             "app.core.dependencies",
         ]
     )
@@ -25,6 +28,11 @@ class Container(containers.DeclarativeContainer):
         session_factory=session_factory,
     )
 
+    company_repository = providers.Factory(
+        CompanyRepository,
+        session_factory=session_factory,
+    )
+
     # Сервисы
     user_service = providers.Factory(
         UserService,
@@ -34,4 +42,9 @@ class Container(containers.DeclarativeContainer):
     auth_service = providers.Factory(
         AuthService,
         repository=user_repository,
+    )
+
+    company_service = providers.Factory(
+        CompanyService,
+        repository=company_repository,
     )

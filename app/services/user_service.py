@@ -9,7 +9,7 @@ class UserService(BaseService):
         super().__init__(repository)
 
     def add(self, schema: UpsertUser):
-        hashed_password = get_password_hash(schema.password)
+        hashed_password = get_password_hash(schema.password) 
         
         db_schema = UpsertUserInDB(
             login=schema.login,
@@ -19,6 +19,7 @@ class UserService(BaseService):
         )
         
         return self._repository.create(db_schema)
+
 
     def patch(self, id: int, schema: UpsertUser):
         hashed_password = get_password_hash(schema.password) if schema.password else None
