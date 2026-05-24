@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List
-from app.schemas.base_schema import ModelBaseInfo, SearchOptions, FindBase
+from app.schemas.base_schema import ModelBaseInfoWithoutUpdatedAt, SearchOptions, FindBase
 
 
 class SkillBase(BaseModel):
@@ -16,19 +16,19 @@ class SkillCreate(SkillBase):
 
 class SkillUpdate(BaseModel):
 
-    name: str | None = None # Делаем необязательным, чтобы можно было обновить только URL
-    site_url: str | None = None 
+    name: str | None = None 
+    category: str | None = None 
 
-class Skill(SkillBase, ModelBaseInfo):
+class Skill(SkillBase, ModelBaseInfoWithoutUpdatedAt):
     ...
 
 class SkillResponse(Skill):
 
     model_config = {"from_attributes": True}
 
-class FindCompany(FindBase):
+class FindSkill(FindBase):
     name__eq: str | None = None
-    url__eq: str | None = None
+    category__eq: str | None = None
 
 class FindSkillResult(BaseModel):
     founds: List[SkillResponse]

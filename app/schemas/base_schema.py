@@ -8,6 +8,9 @@ class ModelBaseInfo(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+class ModelBaseInfoWithoutUpdatedAt(BaseModel):
+    id: int
+    created_at: datetime
 
 class FindBase(BaseModel):
     ordering: str | None = None

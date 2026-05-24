@@ -26,6 +26,5 @@ async def sign_up(user_info: SignUp, service: AuthService = Depends(Provide[Cont
 
 
 @router.get("/me", response_model=User)
-@inject
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
