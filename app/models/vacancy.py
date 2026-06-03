@@ -11,10 +11,10 @@ if TYPE_CHECKING:
 class Vacancy(BaseModelCreatedUpdated):
     __tablename__ = "vacancy"
     
-    company_id: Mapped[int] = mapped_column(ForeignKey("company.id"), primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("company.id"))
 
     title: Mapped[str] = mapped_column(nullable=False)
-    url: Mapped[str] = mapped_column(nullable=False)
+    url: Mapped[str] = mapped_column(nullable=False, unique=True)
     raw_text: Mapped[str] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(default=True)
 

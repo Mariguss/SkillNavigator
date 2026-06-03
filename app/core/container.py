@@ -4,12 +4,13 @@ from app.core.database import db_instance
 from app.repository.company_repository import CompanyRepository
 from app.repository.user_repository import UserRepository
 from app.repository.skill_repository import SkillRepository
+from app.repository.vacancy_repository import VacancyRepository
 
 from app.services.company_service import CompanyService
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 from app.services.skill_service import SkillService
-
+from app.services.vacancy_service import VacancyService
 
 class Container(containers.DeclarativeContainer):
     # Указываем модули, куда dependency_injector будет внедрять зависимости
@@ -19,6 +20,7 @@ class Container(containers.DeclarativeContainer):
             "app.api.v1.endpoints.user",
             "app.api.v1.endpoints.company",
             "app.api.v1.endpoints.skill",
+            "app.api.v1.endpoints.vacancy",
             "app.core.dependencies",
         ]
     )
@@ -42,6 +44,11 @@ class Container(containers.DeclarativeContainer):
         session_factory=session_factory,
     )
 
+    vacancy_repository = providers.Factory(
+        VacancyRepository,
+        session_factory=session_factory,
+    )
+
     # Сервисы
     user_service = providers.Factory(
         UserService,
@@ -61,4 +68,9 @@ class Container(containers.DeclarativeContainer):
     skill_service = providers.Factory(
         SkillService,
         repository=skill_repository,
+    )
+
+    vacancy_service = providers.Factory(
+        VacancyService,
+        repository=vacancy_repository,
     )
