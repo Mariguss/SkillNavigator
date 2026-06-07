@@ -30,6 +30,7 @@ class ApplicationResponse(Application):
     model_config = {"from_attributes": True}
 
 class FindApplication(FindBase):
+    user_id__eq: int | None = None
     vacancy_id__eq: int | None = None
     status__eq: str | None = None
 

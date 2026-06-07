@@ -57,7 +57,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
-    app.container: Container = container # type: ignore[attr-defined]
+    app.container = container
 
     if configs.BACKEND_CORS_ORIGINS:
         app.add_middleware(

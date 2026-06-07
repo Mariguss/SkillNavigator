@@ -475,7 +475,7 @@ async function runParser() {
 
 async function statusParser() {
   const r = await apiFetch('/parser/status', { method:'GET' });
-  if (r&&r.ok) { const d=await r.json(); showToast(`Статус парсера: ${d.status||'unknown'}`); }
+  if (r&&r.ok) { const d=await r.json(); showToast(`Статус парсера: ${d.status||'ok'}`); }
   else showToast('Ошибка получения статуса парсера','danger');
 }
 

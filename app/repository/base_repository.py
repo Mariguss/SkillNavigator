@@ -103,4 +103,3 @@ class BaseRepository:
             except IntegrityError:
                 session.rollback()
                 raise DuplicatedError(detail="Cannot delete: record is referenced by other data. Remove related records first.")
-

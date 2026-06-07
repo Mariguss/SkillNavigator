@@ -40,7 +40,7 @@ async def get_application(
 async def create_application(
     application: ApplicationCreate,
     service: ApplicationService = Depends(Provide[Container.application_service]),
-    current_user: User = Depends(get_current_super_user),
+    current_user: User = Depends(get_current_user),
 ):
     return service.add(application)
 
@@ -51,7 +51,7 @@ async def update_application(
     application_id: int,
     application: ApplicationUpdate,
     service: ApplicationService = Depends(Provide[Container.application_service]),
-    current_user: User = Depends(get_current_super_user),
+    current_user: User = Depends(get_current_user),
 ):
     return service.patch(application_id, application)
 

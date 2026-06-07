@@ -235,9 +235,6 @@ function vacancyCard(v) {
   const applyBtn = user
     ? `<button class="btn btn-sm btn-primary" onclick="openApply(${v.id},'${escHtml(v.title)}')">
          <i class="bi bi-send me-1"></i>Откликнуться
-       </button>
-       <button class="btn btn-sm btn-outline-secondary" onclick="checkMatch(${v.id},this)" title="Соответствие вашим навыкам">
-         <i class="bi bi-percent"></i>
        </button>`
     : `<a href="/login" class="btn btn-sm btn-outline-primary">Войдите, чтобы откликнуться</a>`;
 

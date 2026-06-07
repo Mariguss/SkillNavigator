@@ -1,15 +1,11 @@
-from contextlib import AbstractContextManager
-from typing import Callable
-
-from sqlalchemy.orm import Session
-
-from app.models.vacancy import Vacancy
 from app.repository.base_repository import BaseRepository
+from app.models.vacancy import Vacancy
 from datetime import datetime, timedelta, timezone
 
 
 class VacancyRepository(BaseRepository):
-    def __init__(self, session_factory: Callable[..., AbstractContextManager[Session]]):
+    def __init__(self, session_factory) -> None:
+        self.session_factory = session_factory
         super().__init__(session_factory, Vacancy)
 
     def archive_old_vacancies(self, days: int = 90) -> int:
@@ -22,4 +18,3 @@ class VacancyRepository(BaseRepository):
             )
             session.commit()
             return count
-    
