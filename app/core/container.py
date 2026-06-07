@@ -113,7 +113,8 @@ class Container(containers.DeclarativeContainer):
 
     user_skills_service = providers.Factory(
         UserSkillsService,
-        repository=user_skills_repository,
+        user_skills_repository=user_skills_repository,
+        skill_repository=skill_repository,
     )
 
     ai_service = providers.Factory(
