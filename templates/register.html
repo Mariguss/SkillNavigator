@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Регистрация — SkillNavigator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <div class="card p-4">
+      <h4 class="mb-4 text-center fw-bold"><i class="bi bi-person-plus me-2"></i>Регистрация</h4>
+      <div id="error-msg" class="alert alert-danger d-none"></div>
+      <div class="mb-3">
+        <label class="form-label">Логин</label>
+        <input id="login" type="text" class="form-control" placeholder="Минимум 3 символа"/>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input id="email" type="email" class="form-control" placeholder="mail@example.com"/>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Пароль</label>
+        <div class="input-group">
+          <input id="password" type="password" class="form-control" placeholder="Минимум 6 символов"/>
+          <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()">
+            <i class="bi bi-eye" id="eye-icon"></i>
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-primary w-100" onclick="doRegister()">
+        <i class="bi bi-person-check me-1"></i>Создать аккаунт
+      </button>
+      <hr/>
+      <p class="text-center small mb-0">Уже есть аккаунт? <a href="/login">Войти</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePwd() {
+  const f = document.getElementById('password');
+  const i = document.getElementById('eye-icon');
+  if (f.type === 'password') { f.type = 'text'; i.className = 'bi bi-eye-slash'; }
+  else { f.type = 'password'; i.className = 'bi bi-eye'; }
+}
+
+async function doRegister() {
+  const login = document.getElementById('login').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const err = document.getElementById('error-msg');
+  err.classList.add('d-none');
+
+  if (!login || !email || !password) {
+    err.textContent = 'Заполните все поля'; err.classList.remove('d-none'); return;
+  }
+
+  const res = await fetch('/api/v1/auth/sign-up', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, email, password })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showToast('Аккаунт создан! Выполняю вход…');
+    // Auto-login
+    const lr = await fetch('/api/v1/auth/sign-in', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, password })
+    });
+    if (lr.ok) {
+      const ld = await lr.json();
+      localStorage.setItem('token', ld.access_token);
+      const me = await fetch('/api/v1/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + ld.access_token }
+      });
+      if (me.ok) localStorage.setItem('user', JSON.stringify(await me.json()));
+      window.location.href = '/';
+    }
+  } else {
+    err.textContent = data.detail || 'Ошибка регистрации';
+    err.classList.remove('d-none');
+  }
+}
+</script>
+{% endblock %}

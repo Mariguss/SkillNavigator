@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Вход — SkillNavigator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <div class="card p-4">
+      <h4 class="mb-4 text-center fw-bold"><i class="bi bi-person-circle me-2"></i>Вход</h4>
+      <div id="error-msg" class="alert alert-danger d-none"></div>
+      <div class="mb-3">
+        <label class="form-label">Логин</label>
+        <input id="login" type="text" class="form-control" placeholder="Введите логин"/>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Пароль</label>
+        <div class="input-group">
+          <input id="password" type="password" class="form-control" placeholder="Введите пароль"
+                 onkeydown="if(event.key==='Enter') doLogin()"/>
+          <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()">
+            <i class="bi bi-eye" id="eye-icon"></i>
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-primary w-100" onclick="doLogin()">
+        <i class="bi bi-box-arrow-in-right me-1"></i>Войти
+      </button>
+      <hr/>
+      <p class="text-center small mb-0">Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePwd() {
+  const f = document.getElementById('password');
+  const i = document.getElementById('eye-icon');
+  if (f.type === 'password') { f.type = 'text'; i.className = 'bi bi-eye-slash'; }
+  else { f.type = 'password'; i.className = 'bi bi-eye'; }
+}
+
+async function doLogin() {
+  const login = document.getElementById('login').value.trim();
+  const password = document.getElementById('password').value;
+  const err = document.getElementById('error-msg');
+  err.classList.add('d-none');
+  if (!login || !password) { err.textContent = 'Заполните все поля'; err.classList.remove('d-none'); return; }
+
+  const res = await fetch('/api/v1/auth/sign-in', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, password })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    localStorage.setItem('token', data.access_token);
+    // Fetch current user
+    const me = await fetch('/api/v1/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + data.access_token }
+    });
+    if (me.ok) {
+      const user = await me.json();
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+    window.location.href = '/';
+  } else {
+    err.textContent = data.detail || 'Неверный логин или пароль';
+    err.classList.remove('d-none');
+  }
+}
+</script>
+{% endblock %}

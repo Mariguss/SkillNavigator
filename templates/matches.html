@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Вакансии для вас — SkillNavigator{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4 gap-3 flex-wrap">
+  <h4 class="fw-bold mb-0"><i class="bi bi-star me-2 text-warning"></i>Вакансии для вас</h4>
+  <span class="badge bg-secondary" id="user-skill-badge">Загрузка…</span>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-sm-4 col-md-3">
+        <label class="form-label small fw-semibold">Минимальное совпадение</label>
+        <div class="input-group">
+          <input id="min-match" type="number" class="form-control" value="0" min="0" max="100" step="5"/>
+          <span class="input-group-text">%</span>
+        </div>
+      </div>
+      <div class="col-sm-4 col-md-2">
+        <label class="form-label small fw-semibold">Записей на стр.</label>
+        <select id="page-size" class="form-select">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary" onclick="loadMatches()">
+          <i class="bi bi-search me-1"></i>Показать
+        </button>
+      </div>
+      <div class="col-auto ms-auto text-muted small" id="result-count"></div>
+    </div>
+  </div>
+</div>
+
+<div id="matches-table-wrap">
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-hourglass-split fs-2 d-block mb-2"></i>Нажмите «Показать» для загрузки
+  </div>
+</div>
+<div id="pagination" class="d-flex justify-content-center gap-2 mt-3 flex-wrap"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const user = getUser();
+if (!user) window.location.href = '/login';
+
+let currentPage = 1;
+
+async function loadMatches(page = 1) {
+  currentPage = page;
+  const minMatch = parseFloat(document.getElementById('min-match').value) || 0;
+  const pageSize = parseInt(document.getElementById('page-size').value);
+
+  document.getElementById('matches-table-wrap').innerHTML =
+    '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+
+  const res = await apiFetch(
+    `/analytics/vacancy-matches?min_match=${minMatch}&page=${page}&page_size=${pageSize}`
+  );
+  if (!res || !res.ok) {
+    document.getElementById('matches-table-wrap').innerHTML =
+      '<div class="alert alert-danger">Ошибка загрузки. Убедитесь, что вы авторизованы.</div>';
+    return;
+  }
+  const d = await res.json();
+
+  document.getElementById('user-skill-badge').textContent =
+    `Ваших навыков: ${d.user_skill_count}`;
+
+  document.getElementById('result-count').textContent =
+    d.total ? `Найдено: ${d.total}` : 'Нет результатов';
+
+  if (!d.matches.length) {
+    document.getElementById('matches-table-wrap').innerHTML =
+      `<div class="text-center text-muted py-5">
+        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+        ${d.user_skill_count === 0
+          ? 'У вас не добавлено ни одного навыка. <a href="/profile">Добавьте навыки</a> в профиле.'
+          : `Вакансий с совпадением ≥ ${minMatch}% не найдено.`}
+      </div>`;
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  renderTable(d.matches);
+  renderPagination(d.total, pageSize, page);
+}
+
+function renderTable(list) {
+  const rows = list.map(m => {
+    const pct = m.match_percent;
+    const color = pct >= 70 ? 'success' : pct >= 40 ? 'warning' : 'danger';
+    const bar = `
+      <div class="d-flex align-items-center gap-2">
+        <div class="progress flex-grow-1" style="height:8px">
+          <div class="progress-bar bg-${color}" style="width:${pct}%"></div>
+        </div>
+        <span class="fw-bold text-${color}" style="min-width:42px">${pct}%</span>
+      </div>`;
+    return `
+    <tr>
+      <td class="fw-semibold">${escHtml(m.title)}</td>
+      <td class="text-muted small">${escHtml(m.company_name)}</td>
+      <td style="min-width:160px">${bar}</td>
+      <td class="text-muted small text-center">${m.matched_count} / ${m.total_skill_count}</td>
+      <td>
+        <a href="${escHtml(m.url)}" target="_blank" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-box-arrow-up-right"></i>
+        </a>
+        <button class="btn btn-sm btn-primary ms-1" onclick="applyFromMatch(${m.vacancy_id},'${escHtml(m.title)}')">
+          <i class="bi bi-send"></i>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('matches-table-wrap').innerHTML = `
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Вакансия</th>
+            <th>Компания</th>
+            <th>Совпадение</th>
+            <th class="text-center">Навыков</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderPagination(total, pageSize, current) {
+  const pages = Math.ceil(total / pageSize);
+  const el = document.getElementById('pagination');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 1; i <= pages; i++) {
+    html += `<button class="btn btn-sm ${i===current?'btn-primary':'btn-outline-secondary'}" onclick="loadMatches(${i})">${i}</button>`;
+  }
+  el.innerHTML = html;
+}
+
+// Быстрый отклик прямо со страницы matches
+async function applyFromMatch(vacancyId, title) {
+  if (!user) { window.location.href='/login'; return; }
+  const res = await apiFetch('/application', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: user.id,
+      vacancy_id: vacancyId,
+      status: 'applied',
+      backup_vacancy_name: title,
+      notes: ''
+    })
+  });
+  if (res && res.ok) showToast('Отклик добавлен!');
+  else if (res && res.status === 400) showToast('Отклик уже существует', 'warning');
+  else showToast('Ошибка', 'danger');
+}
+
+loadMatches();
+</script>
+{% endblock %}

@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% block title %}Вакансии — SkillNavigator{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Sidebar filters -->
+  <div class="col-lg-3">
+    <div class="card p-3">
+      <h6 class="fw-bold mb-3"><i class="bi bi-funnel me-1"></i>Фильтры</h6>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Компания</label>
+        <select id="filter-company" class="form-select form-select-sm" onchange="loadVacancies()">
+          <option value="">Все компании</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Навыки</label>
+        <!-- Выбранные теги -->
+        <div id="skill-tags" class="d-flex flex-wrap gap-1 mb-1 min-height-1"></div>
+        <!-- Поле поиска -->
+        <div class="input-group input-group-sm">
+          <input id="skill-input" class="form-control" placeholder="Поиск навыка…"
+                 oninput="searchSkillSuggestions()" autocomplete="off"
+                 onkeydown="if(event.key==='Enter'){addSkillFromInput();event.preventDefault()}"/>
+          <button class="btn btn-outline-secondary" type="button" onclick="addSkillFromInput()" title="Добавить">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+        <!-- Подсказки -->
+        <div id="skill-suggestions" class="list-group mt-1"
+             style="position:absolute;z-index:100;max-height:180px;overflow-y:auto;width:calc(100% - 2rem)"></div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Статус</label>
+        <select id="filter-active" class="form-select form-select-sm" onchange="loadVacancies()">
+          <option value="true" selected>Активные</option>
+          <option value="">Все</option>
+          <option value="false">Архив</option>
+        </select>
+      </div>
+
+      <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetFilters()">
+        <i class="bi bi-x-circle me-1"></i>Сбросить
+      </button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="col-lg-9">
+    <div class="input-group mb-3">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input id="search-input" class="form-control" placeholder="Поиск по названию вакансии…"
+             oninput="debounceSearch()"/>
+    </div>
+    <div id="vacancy-count" class="text-muted small mb-2"></div>
+    <div id="vacancy-list"></div>
+    <div id="pagination" class="d-flex justify-content-center mt-3 gap-2 flex-wrap"></div>
+  </div>
+</div>
+
+<!-- Apply modal -->
+<div class="modal fade" id="applyModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-send me-2"></i>Добавить отклик</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="apply-vacancy-id"/>
+        <p class="text-muted small mb-3" id="apply-vacancy-name"></p>
+        <div class="mb-3">
+          <label class="form-label">Статус</label>
+          <select id="apply-status" class="form-select">
+            <option value="applied">Отправлен</option>
+            <option value="vcv">VCV</option>
+            <option value="test_task">Тестовое задание</option>
+            <option value="interview">Интервью</option>
+            <option value="offer">Оффер</option>
+            <option value="rejected">Отказ</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Заметки</label>
+          <textarea id="apply-notes" class="form-control" rows="3" placeholder="Личные заметки…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" onclick="submitApplication()">
+          <i class="bi bi-send me-1"></i>Откликнуться
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+let searchTimer = null;
+let skillTimer = null;
+let companyMap = {};       // company id → name
+let selectedSkills = [];   // массив выбранных навыков (строки)
+
+/* ── Debounce ──────────────────────────────────────────── */
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadVacancies, 400);
+}
+
+/* ── Теги навыков ──────────────────────────────────────── */
+function renderSkillTags() {
+  const el = document.getElementById('skill-tags');
+  if (!selectedSkills.length) { el.innerHTML = ''; return; }
+  el.innerHTML = selectedSkills.map(s => `
+    <span class="badge bg-primary d-flex align-items-center gap-1" style="font-size:.75rem">
+      ${escHtml(s)}
+      <button class="btn-close btn-close-white" style="font-size:.55rem"
+              onclick="removeSkill('${escHtml(s)}')"></button>
+    </span>`).join('');
+}
+
+function addSkill(name) {
+  const n = name.trim();
+  if (!n || selectedSkills.map(s=>s.toLowerCase()).includes(n.toLowerCase())) return;
+  selectedSkills.push(n);
+  renderSkillTags();
+  document.getElementById('skill-input').value = '';
+  document.getElementById('skill-suggestions').innerHTML = '';
+  loadVacancies();
+}
+
+function addSkillFromInput() {
+  const val = document.getElementById('skill-input').value.trim();
+  if (val) addSkill(val);
+}
+
+function removeSkill(name) {
+  selectedSkills = selectedSkills.filter(s => s.toLowerCase() !== name.toLowerCase());
+  renderSkillTags();
+  loadVacancies();
+}
+
+async function searchSkillSuggestions() {
+  const q = document.getElementById('skill-input').value.trim().toLowerCase();
+  const el = document.getElementById('skill-suggestions');
+  if (!q) { el.innerHTML = ''; return; }
+  clearTimeout(skillTimer);
+  skillTimer = setTimeout(async () => {
+    const res = await apiFetch(`/skill?page_size=100&ordering=name`);
+    if (!res || !res.ok) return;
+    const data = await res.json();
+    const filtered = (data.founds || [])
+      .filter(s => s.name.toLowerCase().includes(q))
+      .filter(s => !selectedSkills.map(x=>x.toLowerCase()).includes(s.name.toLowerCase()))
+      .slice(0, 8);
+    if (!filtered.length) { el.innerHTML = ''; return; }
+    el.innerHTML = filtered.map(s =>
+      `<button class="list-group-item list-group-item-action py-1 small"
+               onclick="addSkill('${escHtml(s.name)}')">${escHtml(s.name)}
+               ${s.category ? `<span class="text-muted ms-1">${escHtml(s.category)}</span>` : ''}
+       </button>`).join('');
+  }, 250);
+}
+
+/* ── Сброс фильтров ────────────────────────────────────── */
+function resetFilters() {
+  document.getElementById('filter-company').value = '';
+  document.getElementById('filter-active').value = 'true';
+  document.getElementById('search-input').value = '';
+  selectedSkills = [];
+  renderSkillTags();
+  loadVacancies();
+}
+
+/* ── Загрузка вакансий ─────────────────────────────────── */
+async function loadVacancies(page = 1) {
+  currentPage = page;
+  const active = document.getElementById('filter-active').value;
+  const company = document.getElementById('filter-company').value;
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+
+  // При выбранных навыках грузим всё для клиентской фильтрации
+  const useAll = selectedSkills.length > 0;
+  let params = useAll
+    ? `page=1&page_size=all&ordering=-id`
+    : `page=${page}&page_size=10&ordering=-id`;
+  if (active !== '') params += `&is_active__eq=${active}`;
+  if (company) params += `&company_id__eq=${company}`;
+
+  const res = await apiFetch(`/vacancy?${params}`);
+  if (!res) return;
+  if (!res.ok) { showToast('Ошибка загрузки вакансий', 'danger'); return; }
+  const data = await res.json();
+
+  let list = data.founds || [];
+  if (q) list = list.filter(v => v.title.toLowerCase().includes(q));
+  if (selectedSkills.length) {
+    list = list.filter(v => {
+      const txt = (v.raw_text || '').toLowerCase();
+      return selectedSkills.every(s => txt.includes(s.toLowerCase()));
+    });
+  }
+
+  document.getElementById('vacancy-count').textContent = `Найдено: ${list.length}`;
+  renderVacancies(list);
+  if (useAll) {
+    document.getElementById('pagination').innerHTML = '';
+  } else {
+    renderPagination(data.search_options);
+  }
+}
+
+function renderVacancies(list) {
+  const el = document.getElementById('vacancy-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Вакансии не найдены</div>';
+    return;
+  }
+  el.innerHTML = list.map(v => vacancyCard(v)).join('');
+}
+
+function vacancyCard(v) {
+  const companyName = companyMap[v.company_id] || `Компания #${v.company_id}`;
+  const badge = v.is_active
+    ? '<span class="badge bg-success">Активна</span>'
+    : '<span class="badge bg-secondary">Архив</span>';
+
+  const user = getUser();
+  const applyBtn = user
+    ? `<button class="btn btn-sm btn-primary" onclick="openApply(${v.id},'${escHtml(v.title)}')">
+         <i class="bi bi-send me-1"></i>Откликнуться
+       </button>
+       <button class="btn btn-sm btn-outline-secondary" onclick="checkMatch(${v.id},this)" title="Соответствие вашим навыкам">
+         <i class="bi bi-percent"></i>
+       </button>`
+    : `<a href="/login" class="btn btn-sm btn-outline-primary">Войдите, чтобы откликнуться</a>`;
+
+  const preview = escHtml((v.raw_text||'').replace(/\s+/g,' ').substring(0,180));
+
+  return `
+  <div class="card mb-3 vacancy-card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-1">
+        <div>
+          <h6 class="fw-bold mb-1">${escHtml(v.title)}</h6>
+          <small class="text-muted"><i class="bi bi-building me-1"></i>${escHtml(companyName)}</small>
+        </div>
+        ${badge}
+      </div>
+      <p class="text-muted small mt-2 mb-2" style="overflow:hidden;max-height:48px">${preview}…</p>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        ${applyBtn}
+        <a href="${escHtml(v.url)}" target="_blank" class="btn btn-sm btn-link p-0 text-muted">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Открыть вакансию
+        </a>
+      </div>
+    </div>
+  </div>`;
+}
+
+function openApply(id, title) {
+  if (!getToken()) { window.location.href='/login'; return; }
+  document.getElementById('apply-vacancy-id').value = id;
+  document.getElementById('apply-vacancy-name').textContent = title;
+  document.getElementById('apply-notes').value = '';
+  new bootstrap.Modal(document.getElementById('applyModal')).show();
+}
+
+async function submitApplication() {
+  const user = getUser();
+  if (!user) { window.location.href='/login'; return; }
+  const vacancyId = parseInt(document.getElementById('apply-vacancy-id').value);
+  const vacancyTitle = document.getElementById('apply-vacancy-name').textContent;
+  const applyStatus = document.getElementById('apply-status').value;
+  const notes = document.getElementById('apply-notes').value;
+
+  const res = await apiFetch('/application', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: user.id,
+      vacancy_id: vacancyId,
+      status: applyStatus,
+      backup_vacancy_name: vacancyTitle,
+      notes
+    })
+  });
+  if (res && res.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('applyModal')).hide();
+    showToast('Отклик добавлен!');
+  } else {
+    const d = res ? await res.json() : {};
+    showToast(d.detail || 'Ошибка при добавлении', 'danger');
+  }
+}
+
+function renderPagination(opts) {
+  const el = document.getElementById('pagination');
+  if (!opts || opts.total_count <= opts.page_size) { el.innerHTML = ''; return; }
+  const pages = Math.ceil(opts.total_count / opts.page_size);
+  let html = '';
+  const start = Math.max(1, currentPage - 2);
+  const end   = Math.min(pages, currentPage + 2);
+  if (start > 1) html += `<button class="btn btn-sm btn-outline-secondary" onclick="loadVacancies(1)">1</button><span class="align-self-center">…</span>`;
+  for (let i = start; i <= end; i++) {
+    html += `<button class="btn btn-sm ${i===currentPage?'btn-primary':'btn-outline-secondary'}" onclick="loadVacancies(${i})">${i}</button>`;
+  }
+  if (end < pages) html += `<span class="align-self-center">…</span><button class="btn btn-sm btn-outline-secondary" onclick="loadVacancies(${pages})">${pages}</button>`;
+  el.innerHTML = html;
+}
+
+async function loadCompanies() {
+  const res = await apiFetch('/company?page_size=200&ordering=name');
+  if (!res || !res.ok) return;
+  const data = await res.json();
+  const sel = document.getElementById('filter-company');
+  (data.founds||[]).forEach(c => {
+    companyMap[c.id] = c.name;
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name;
+    sel.appendChild(o);
+  });
+}
+
+loadCompanies().then(() => loadVacancies());
+</script>
+{% endblock %}

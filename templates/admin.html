@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+{% block title %}Администрирование — SkillNavigator{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-shield-lock me-2 text-danger"></i>Панель администратора</h4>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4" id="adminTabs">
+  <li class="nav-item">
+    <button class="nav-link active" onclick="switchTab('users',this)">
+      <i class="bi bi-people me-1"></i>Пользователи
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" onclick="switchTab('vacancies',this)">
+      <i class="bi bi-briefcase me-1"></i>Вакансии
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" onclick="switchTab('companies',this)">
+      <i class="bi bi-building me-1"></i>Компании
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" onclick="switchTab('skills',this)">
+      <i class="bi bi-tools me-1"></i>Навыки
+    </button>
+  </li>
+  <li class="nav-item ms-auto">
+    <button class="nav-link text-success" onclick="runParser()">
+      <i class="bi bi-play-circle me-1"></i>Запустить парсер
+    </button>
+  </li>
+</ul>
+
+<!-- Users -->
+<div id="tab-users">
+  <div class="d-flex gap-2 mb-3 flex-wrap">
+    <input id="u-search" class="form-control form-control-sm" style="max-width:300px" placeholder="Поиск по логину/email…" oninput="loadUsers()"/>
+    <button class="btn btn-success btn-sm ms-auto" onclick="openUserCreate()">
+      <i class="bi bi-plus-lg me-1"></i>Создать пользователя
+    </button>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover table-sm align-middle">
+      <thead class="table-light">
+        <tr><th>#</th><th>Логин</th><th>Email</th><th>Роль</th><th>Создан</th><th></th></tr>
+      </thead>
+      <tbody id="users-tbody"></tbody>
+    </table>
+  </div>
+  <div id="users-pagination" class="d-flex gap-2 mt-2"></div>
+</div>
+
+<!-- Vacancies -->
+<div id="tab-vacancies" style="display:none">
+  <div class="d-flex gap-2 mb-3 flex-wrap">
+    <input id="v-search" class="form-control form-control-sm" style="max-width:300px" placeholder="Поиск по названию…" oninput="loadAdminVacancies()"/>
+    <select id="v-active" class="form-select form-select-sm" style="width:auto" onchange="loadAdminVacancies()">
+      <option value="">Все</option><option value="true" selected>Активные</option><option value="false">Архив</option>
+    </select>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover table-sm align-middle">
+      <thead class="table-light">
+        <tr><th>#</th><th>Название</th><th>Компания</th><th>Статус</th><th>Дата</th><th></th></tr>
+      </thead>
+      <tbody id="vacancies-tbody"></tbody>
+    </table>
+  </div>
+  <div id="vacancies-pagination" class="d-flex gap-2 mt-2"></div>
+</div>
+
+<!-- Companies -->
+<div id="tab-companies" style="display:none">
+  <button class="btn btn-success btn-sm mb-3" onclick="openCompanyCreate()">
+    <i class="bi bi-plus-lg me-1"></i>Добавить компанию
+  </button>
+  <div class="table-responsive">
+    <table class="table table-hover table-sm align-middle">
+      <thead class="table-light">
+        <tr><th>#</th><th>Название</th><th>Сайт</th><th></th></tr>
+      </thead>
+      <tbody id="companies-tbody"></tbody>
+    </table>
+  </div>
+  <div id="companies-pagination" class="d-flex gap-2 mt-2"></div>
+</div>
+
+<!-- Skills -->
+<div id="tab-skills" style="display:none">
+  <button class="btn btn-success btn-sm mb-3" onclick="openSkillCreate()">
+    <i class="bi bi-plus-lg me-1"></i>Добавить навык
+  </button>
+  <div class="table-responsive">
+    <table class="table table-hover table-sm align-middle">
+      <thead class="table-light">
+        <tr><th>#</th><th>Название</th><th>Категория</th><th></th></tr>
+      </thead>
+      <tbody id="skills-tbody"></tbody>
+    </table>
+  </div>
+  <div id="skills-pagination" class="d-flex gap-2 mt-2"></div>
+</div>
+
+<!-- Universal edit modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">Редактировать</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer">
+        <button id="modal-delete-btn" class="btn btn-danger me-auto d-none" onclick="modalDelete()">Удалить</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" onclick="modalSave()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const user = getUser();
+if (!user || !user.is_superuser) window.location.href = '/';
+
+let activeTab = 'users';
+let modalContext = {};   // { type, id, method, url, fields }
+const modal = new bootstrap.Modal(document.getElementById('editModal'));
+
+/* ── tabs ───────────────────────────────────────────── */
+function switchTab(name, btn) {
+  document.querySelectorAll('#adminTabs .nav-link').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['users','vacancies','companies','skills'].forEach(t =>
+    document.getElementById('tab-'+t).style.display = t===name?'':'none');
+  activeTab = name;
+  if (name==='users') loadUsers();
+  else if (name==='vacancies') loadAdminVacancies();
+  else if (name==='companies') loadCompanies();
+  else if (name==='skills') loadSkills();
+}
+
+/* ── pagination helper ───────────────────────────────── */
+function mkPagination(opts, currentPage, loadFn, elId) {
+  const el = document.getElementById(elId);
+  if (!opts || opts.total_count <= opts.page_size) { el.innerHTML=''; return; }
+  const pages = Math.ceil(opts.total_count / opts.page_size);
+  el.innerHTML = Array.from({length:pages},(_,i)=>i+1).map(i=>
+    `<button class="btn btn-sm ${i===currentPage?'btn-primary':'btn-outline-secondary'}" onclick="${loadFn}(${i})">${i}</button>`
+  ).join('');
+}
+
+/* ── users ───────────────────────────────────────────── */
+let uPage = 1;
+async function loadUsers(page=1) {
+  uPage = page;
+  const q = document.getElementById('u-search').value.trim();
+  let params = `page=${page}&page_size=15&ordering=-id`;
+  if (q) params += `&login__eq=${encodeURIComponent(q)}`;
+  const res = await apiFetch(`/user?${params}`);
+  if (!res || !res.ok) return;
+  const d = await res.json();
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = (d.founds||[]).map(u => `
+    <tr>
+      <td class="text-muted">${u.id}</td>
+      <td>${escHtml(u.login)}</td>
+      <td>${escHtml(u.email||'')}</td>
+      <td>${u.is_superuser ? '<span class="badge bg-danger">Админ</span>' : '<span class="badge bg-secondary">Пользователь</span>'}</td>
+      <td class="text-muted small">${new Date(u.created_at).toLocaleDateString('ru')}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="editUser(${u.id},'${escHtml(u.login)}','${escHtml(u.email||'')}',${u.is_superuser})">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteUser(${u.id},'${escHtml(u.login)}')">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+  mkPagination(d.search_options, uPage, 'loadUsers', 'users-pagination');
+}
+
+function openUserCreate() {
+  document.getElementById('modal-title').textContent = 'Новый пользователь';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="mb-3"><label class="form-label">Логин</label><input id="f-login" class="form-control"/></div>
+    <div class="mb-3"><label class="form-label">Email</label><input id="f-email" type="email" class="form-control"/></div>
+    <div class="mb-3"><label class="form-label">Пароль</label><input id="f-password" type="password" class="form-control"/></div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="f-super"/>
+      <label class="form-check-label">Администратор</label>
+    </div>`;
+  document.getElementById('modal-delete-btn').className = 'btn btn-danger me-auto d-none';
+  modalContext = { save: async () => {
+    const body = {
+      login: document.getElementById('f-login').value,
+      email: document.getElementById('f-email').value,
+      password: document.getElementById('f-password').value,
+      is_superuser: document.getElementById('f-super').checked,
+    };
+    const r = await apiFetch('/user', { method:'POST', body:JSON.stringify(body) });
+    if (r && r.ok) { modal.hide(); showToast('Пользователь создан'); loadUsers(); }
+    else {
+      const d = r ? await r.json() : {};
+      showToast(d.detail || 'Ошибка', 'danger');
+    }
+  }};
+  modal.show();
+}
+
+function editUser(id, login, email, isSuperuser) {
+  document.getElementById('modal-title').textContent = `Пользователь #${id}: ${login}`;
+  document.getElementById('modal-body').innerHTML = `
+    <input type="hidden" id="f-id" value="${id}"/>
+    <div class="mb-3"><label class="form-label">Email</label>
+      <input id="f-email" class="form-control" value="${escHtml(email)}"/></div>
+    <div class="mb-3"><label class="form-label">Новый пароль (оставьте пустым, чтобы не менять)</label>
+      <input id="f-password" type="password" class="form-control"/></div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="f-super" ${isSuperuser?'checked':''}/>
+      <label class="form-check-label">Администратор</label>
+    </div>`;
+  document.getElementById('modal-delete-btn').className = 'btn btn-danger me-auto d-none';
+  modalContext = {
+    type:'user', id,
+    save: async () => {
+      const body = { email: document.getElementById('f-email').value, is_superuser: document.getElementById('f-super').checked };
+      const pw = document.getElementById('f-password').value;
+      if (pw) body.password = pw;
+      const r = await apiFetch(`/user/${id}`, { method:'PATCH', body:JSON.stringify(body) });
+      if (r&&r.ok) { modal.hide(); showToast('Сохранено'); loadUsers(uPage); }
+      else showToast('Ошибка', 'danger');
+    }
+  };
+  modal.show();
+}
+
+async function deleteUser(id, login) {
+  if (!confirm(`Удалить пользователя "${login}"?`)) return;
+  const r = await apiFetch(`/user/${id}`, { method:'DELETE' });
+  if (r && (r.ok||r.status===204)) { showToast('Пользователь удалён','warning'); loadUsers(uPage); }
+  else { const d = r ? await r.json() : {}; showToast(d.detail || 'Ошибка', 'danger'); }
+}
+
+/* ── vacancies ───────────────────────────────────────── */
+let vPage = 1;
+async function loadAdminVacancies(page=1) {
+  vPage = page;
+  const active = document.getElementById('v-active').value;
+  let params = `page=${page}&page_size=15&ordering=-id`;
+  if (active!=='') params += `&is_active__eq=${active}`;
+  const res = await apiFetch(`/vacancy?${params}`);
+  if (!res||!res.ok) return;
+  const d = await res.json();
+  const tbody = document.getElementById('vacancies-tbody');
+  tbody.innerHTML = (d.founds||[]).map(v => `
+    <tr>
+      <td class="text-muted">${v.id}</td>
+      <td><a href="${escHtml(v.url)}" target="_blank" class="text-decoration-none">${escHtml(v.title)}</a></td>
+      <td class="text-muted small">компания #${v.company_id}</td>
+      <td>${v.is_active ? '<span class="badge bg-success">Активна</span>' : '<span class="badge bg-secondary">Архив</span>'}</td>
+      <td class="text-muted small">${new Date(v.created_at).toLocaleDateString('ru')}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-info" id="ai-btn-${v.id}"
+                onclick="extractSkillsAI(${v.id})" title="Извлечь навыки через ИИ">
+          <i class="bi bi-robot"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-warning ms-1" onclick="toggleVacancy(${v.id},${v.is_active})">
+          <i class="bi bi-${v.is_active?'archive':'check2-circle'}"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteVacancy(${v.id})">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+  mkPagination(d.search_options, vPage, 'loadAdminVacancies', 'vacancies-pagination');
+}
+
+async function extractSkillsAI(id) {
+  const btn = document.getElementById(`ai-btn-${id}`);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+  const r = await apiFetch(`/vacancy/${id}/extract-skills`, { method: 'POST' });
+  if (r && r.ok) {
+    const d = await r.json();
+    const preview = d.extracted_skills.slice(0, 4).join(', ');
+    const more = d.count > 4 ? ` и ещё ${d.count - 4}` : '';
+    showToast(`ИИ извлёк ${d.count} навыков: ${preview}${more}`);
+    btn.innerHTML = `<span class="badge bg-info text-dark">${d.count}</span>`;
+  } else {
+    const err = r ? await r.json() : {};
+    showToast(err.detail || 'Ошибка ИИ', 'danger');
+    btn.innerHTML = '<i class="bi bi-robot"></i>';
+    btn.disabled = false;
+  }
+}
+
+async function toggleVacancy(id, isActive) {
+  const r = await apiFetch(`/vacancy/${id}`, { method:'PATCH', body:JSON.stringify({is_active:!isActive}) });
+  if (r&&r.ok) { showToast(isActive?'Архивирована':'Активирована'); loadAdminVacancies(vPage); }
+}
+
+async function deleteVacancy(id) {
+  if (!confirm('Удалить вакансию?')) return;
+  const r = await apiFetch(`/vacancy/${id}`, { method:'DELETE' });
+  if (r&&(r.ok||r.status===204)) { showToast('Вакансия удалена','warning'); loadAdminVacancies(vPage); }
+}
+
+/* ── companies ───────────────────────────────────────── */
+let cPage = 1;
+async function loadCompanies(page=1) {
+  cPage = page;
+  const res = await apiFetch(`/company?page=${page}&page_size=15&ordering=-id`);
+  if (!res||!res.ok) return;
+  const d = await res.json();
+  const tbody = document.getElementById('companies-tbody');
+  tbody.innerHTML = (d.founds||[]).map(c => `
+    <tr>
+      <td class="text-muted">${c.id}</td>
+      <td>${escHtml(c.name)}</td>
+      <td class="text-muted small">${c.site_url ? `<a href="${escHtml(c.site_url)}" target="_blank">${escHtml(c.site_url)}</a>` : '—'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="editCompany(${c.id},'${escHtml(c.name)}','${escHtml(c.site_url||'')}')">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteCompany(${c.id})">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+  mkPagination(d.search_options, cPage, 'loadCompanies', 'companies-pagination');
+}
+
+function openCompanyCreate() {
+  document.getElementById('modal-title').textContent = 'Новая компания';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="mb-3"><label class="form-label">Название</label><input id="f-name" class="form-control"/></div>
+    <div class="mb-3"><label class="form-label">Сайт</label><input id="f-site" class="form-control"/></div>`;
+  document.getElementById('modal-delete-btn').className = 'btn btn-danger me-auto d-none';
+  modalContext = { save: async () => {
+    const r = await apiFetch('/company', { method:'POST', body:JSON.stringify({
+      name:document.getElementById('f-name').value,
+      site_url:document.getElementById('f-site').value||null
+    })});
+    if (r&&r.ok) { modal.hide(); showToast('Компания создана'); loadCompanies(); }
+    else showToast('Ошибка', 'danger');
+  }};
+  modal.show();
+}
+
+function editCompany(id, name, site) {
+  document.getElementById('modal-title').textContent = `Компания #${id}`;
+  document.getElementById('modal-body').innerHTML = `
+    <input type="hidden" id="f-id" value="${id}"/>
+    <div class="mb-3"><label class="form-label">Название</label><input id="f-name" class="form-control" value="${escHtml(name)}"/></div>
+    <div class="mb-3"><label class="form-label">Сайт</label><input id="f-site" class="form-control" value="${escHtml(site)}"/></div>`;
+  document.getElementById('modal-delete-btn').className = 'btn btn-danger me-auto';
+  modalContext = { deleteAction: async () => deleteCompany(id), save: async () => {
+    const r = await apiFetch(`/company/${id}`, { method:'PATCH', body:JSON.stringify({
+      name:document.getElementById('f-name').value,
+      site_url:document.getElementById('f-site').value||null
+    })});
+    if (r&&r.ok) { modal.hide(); showToast('Сохранено'); loadCompanies(cPage); }
+    else showToast('Ошибка', 'danger');
+  }};
+  modal.show();
+}
+
+async function deleteCompany(id) {
+  if (!confirm('Удалить компанию?')) return;
+  const r = await apiFetch(`/company/${id}`, { method:'DELETE' });
+  if (r&&(r.ok||r.status===204)) { modal.hide(); showToast('Компания удалена','warning'); loadCompanies(cPage); }
+  else { const d = r ? await r.json() : {}; showToast(d.detail || 'Ошибка', 'danger'); }
+}
+
+/* ── skills ──────────────────────────────────────────── */
+let sPage = 1;
+async function loadSkills(page=1) {
+  sPage = page;
+  const res = await apiFetch(`/skill?page=${page}&page_size=15&ordering=name`);
+  if (!res||!res.ok) return;
+  const d = await res.json();
+  const tbody = document.getElementById('skills-tbody');
+  tbody.innerHTML = (d.founds||[]).map(s => `
+    <tr>
+      <td class="text-muted">${s.id}</td>
+      <td>${escHtml(s.name)}</td>
+      <td class="text-muted small">${escHtml(s.category||'—')}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="editSkill(${s.id},'${escHtml(s.name)}','${escHtml(s.category||'')}')">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteSkill(${s.id})">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+  mkPagination(d.search_options, sPage, 'loadSkills', 'skills-pagination');
+}
+
+function openSkillCreate() {
+  document.getElementById('modal-title').textContent = 'Новый навык';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="mb-3"><label class="form-label">Название</label><input id="f-name" class="form-control"/></div>
+    <div class="mb-3"><label class="form-label">Категория</label><input id="f-category" class="form-control" placeholder="hard / soft / tool"/></div>`;
+  document.getElementById('modal-delete-btn').className = 'btn btn-danger me-auto d-none';
+  modalContext = { save: async () => {
+    const r = await apiFetch('/skill', { method:'POST', body:JSON.stringify({
+      name:document.getElementById('f-name').value,
+      category:document.getElementById('f-category').value||null
+    })});
+    if (r&&r.ok) { modal.hide(); showToast('Навык создан'); loadSkills(); }
+    else showToast('Ошибка', 'danger');
+  }};
+  modal.show();
+}
+
+function editSkill(id, name, category) {
+  document.getElementById('modal-title').textContent = `Навык #${id}`;
+  document.getElementById('modal-body').innerHTML = `
+    <input type="hidden" id="f-id" value="${id}"/>
+    <div class="mb-3"><label class="form-label">Название</label><input id="f-name" class="form-control" value="${escHtml(name)}"/></div>
+    <div class="mb-3"><label class="form-label">Категория</label><input id="f-category" class="form-control" value="${escHtml(category)}"/></div>`;
+  document.getElementById('modal-delete-btn').className = 'btn btn-danger me-auto';
+  modalContext = { deleteAction: async () => deleteSkill(id), save: async () => {
+    const r = await apiFetch(`/skill/${id}`, { method:'PATCH', body:JSON.stringify({
+      name:document.getElementById('f-name').value,
+      category:document.getElementById('f-category').value||null
+    })});
+    if (r&&r.ok) { modal.hide(); showToast('Сохранено'); loadSkills(sPage); }
+    else showToast('Ошибка', 'danger');
+  }};
+  modal.show();
+}
+
+async function deleteSkill(id) {
+  if (!confirm('Удалить навык?')) return;
+  const r = await apiFetch(`/skill/${id}`, { method:'DELETE' });
+  if (r&&(r.ok||r.status===204)) { modal.hide(); showToast('Навык удалён','warning'); loadSkills(sPage); }
+  else { const d = r ? await r.json() : {}; showToast(d.detail || 'Ошибка', 'danger'); }
+}
+
+/* ── modal save/delete dispatch ──────────────────────── */
+function modalSave() { if (modalContext.save) modalContext.save(); }
+function modalDelete() { if (modalContext.deleteAction) modalContext.deleteAction(); }
+
+/* ── parser ──────────────────────────────────────────── */
+async function runParser() {
+  const r = await apiFetch('/parser/run', { method:'POST' });
+  if (r&&r.ok) { const d=await r.json(); showToast(`Парсер запущен: ${d.status||'ok'}`); }
+  else showToast('Ошибка запуска парсера','danger');
+}
+
+loadUsers();
+</script>
+{% endblock %}

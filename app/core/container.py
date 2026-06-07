@@ -7,7 +7,7 @@ from app.repository.skill_repository import SkillRepository
 from app.repository.vacancy_repository import VacancyRepository
 from app.repository.application_repository import ApplicationRepository
 from app.repository.user_skills_repository import UserSkillsRepository
-
+from app.repository.vacancy_skills_repository import VacancySkillsRepository
 
 from app.services.company_service import CompanyService
 from app.services.auth_service import AuthService
@@ -16,6 +16,11 @@ from app.services.skill_service import SkillService
 from app.services.vacancy_service import VacancyService
 from app.services.application_service import ApplicationService
 from app.services.user_skills_service import UserSkillsService
+from app.services.ai_service import AIService
+from app.services.parser_service import ParserService
+from app.services.parser_scheduler import ParserScheduler
+from app.services.analytics_service import AnalyticsService
+from app.services.hygiene_service import HygieneService
 
 class Container(containers.DeclarativeContainer):
     # Указываем модули, куда dependency_injector будет внедрять зависимости
@@ -27,6 +32,8 @@ class Container(containers.DeclarativeContainer):
             "app.api.v1.endpoints.skill",
             "app.api.v1.endpoints.vacancy",
             "app.api.v1.endpoints.application",
+            "app.api.v1.endpoints.analytics",
+            "app.api.v1.endpoints.parser",
             "app.api.v1.endpoints.user_skills",
             "app.core.dependencies",
         ]
@@ -66,6 +73,11 @@ class Container(containers.DeclarativeContainer):
         session_factory=session_factory)
 
 
+    vacancy_skills_repository = providers.Factory(
+        VacancySkillsRepository,
+        session_factory=session_factory
+    )
+
     # Сервисы
     user_service = providers.Factory(
         UserService,
@@ -90,6 +102,8 @@ class Container(containers.DeclarativeContainer):
     vacancy_service = providers.Factory(
         VacancyService,
         repository=vacancy_repository,
+        user_skills_repository=user_skills_repository,
+        vacancy_skills_repository=vacancy_skills_repository,
     )
 
     application_service = providers.Factory(
@@ -100,4 +114,31 @@ class Container(containers.DeclarativeContainer):
     user_skills_service = providers.Factory(
         UserSkillsService,
         repository=user_skills_repository,
+    )
+
+    ai_service = providers.Factory(
+        AIService,
+        skill_repository=skill_repository,
+        vacancy_skills_repository=vacancy_skills_repository,
+    )
+
+    parser_service = providers.Factory(
+        ParserService,
+        vacancy_repository=vacancy_repository,
+        company_repository=company_repository,
+    )
+
+    parser_scheduler = providers.Factory(
+        ParserScheduler,
+        parser_service=parser_service,
+    )
+
+    analytics_service = providers.Factory(
+        AnalyticsService,
+        session_factory=session_factory,
+    )
+
+    hygiene_service = providers.Factory(
+        HygieneService,
+        vacancy_repository=vacancy_repository
     )

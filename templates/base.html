@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{% block title %}SkillNavigator{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+  <style>
+    body { background:#f8f9fa; min-height:100vh; }
+    .navbar-brand { font-weight:700; font-size:1.3rem; letter-spacing:.5px; }
+    .card { border:none; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+    .skill-badge { font-size:.75rem; }
+    .vacancy-card { transition:.2s; }
+    .vacancy-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.13); }
+    #toast-container { position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999; }
+    .match-ring { font-weight:700; font-size:1.05rem; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="/"><i class="bi bi-compass me-2"></i>SkillNavigator</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-house me-1"></i>Вакансии</a></li>
+        <li class="nav-item" id="nav-applications" style="display:none">
+          <a class="nav-link" href="/applications"><i class="bi bi-list-check me-1"></i>Отклики</a>
+        </li>
+        <li class="nav-item" id="nav-analytics" style="display:none">
+          <a class="nav-link" href="/analytics"><i class="bi bi-bar-chart me-1"></i>Аналитика</a>
+        </li>
+        <li class="nav-item" id="nav-matches" style="display:none">
+          <a class="nav-link" href="/matches"><i class="bi bi-star me-1"></i>Для вас</a>
+        </li>
+        <li class="nav-item" id="nav-admin" style="display:none">
+          <a class="nav-link" href="/admin"><i class="bi bi-shield-lock me-1"></i>Админ</a>
+        </li>
+      </ul>
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item" id="nav-profile" style="display:none">
+          <a class="nav-link" href="/profile"><i class="bi bi-person-circle me-1"></i><span id="nav-username"></span></a>
+        </li>
+        <li class="nav-item" id="nav-logout" style="display:none">
+          <a class="nav-link" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-1"></i>Выйти</a>
+        </li>
+        <li class="nav-item" id="nav-login">
+          <a class="nav-link" href="/login"><i class="bi bi-box-arrow-in-right me-1"></i>Войти</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  {% block content %}{% endblock %}
+</div>
+
+<footer class="mt-5 py-3 text-center text-muted small border-top">
+  SkillNavigator &copy; 2026 &mdash;
+  <a href="https://github.com/Mariguss/SkillNavigator" target="_blank" class="text-muted">GitHub</a>
+</footer>
+
+<div id="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API = '/api/v1';
+
+function getToken() { return localStorage.getItem('token'); }
+function getUser()  { return JSON.parse(localStorage.getItem('user') || 'null'); }
+
+function authHeaders(extra) {
+  const t = getToken();
+  const h = { 'Content-Type': 'application/json' };
+  if (t) h['Authorization'] = 'Bearer ' + t;
+  return Object.assign(h, extra || {});
+}
+
+async function apiFetch(path, opts = {}) {
+  const headers = authHeaders(opts.headers);
+  const res = await fetch(API + path, { ...opts, headers });
+  if (res.status === 401) { logout(); return null; }
+  return res;
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+}
+
+function showToast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast align-items-center text-bg-${type} border-0 show mb-2`;
+  el.innerHTML = `<div class="d-flex"><div class="toast-body">${msg}</div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.closest('.toast').remove()"></button></div>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+(function initNav() {
+  const user = getUser();
+  if (user) {
+    document.getElementById('nav-login').style.display = 'none';
+    document.getElementById('nav-profile').style.display = '';
+    document.getElementById('nav-logout').style.display = '';
+    document.getElementById('nav-applications').style.display = '';
+    document.getElementById('nav-analytics').style.display = '';
+    document.getElementById('nav-matches').style.display = '';
+    document.getElementById('nav-username').textContent = user.login || user.email || '';
+    if (user.is_superuser) {
+      document.getElementById('nav-admin').style.display = '';
+    }
+  }
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

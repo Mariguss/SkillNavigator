@@ -1,26 +1,63 @@
 import os
+import asyncio
 import psutil
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Gauge
 
 from app.api.v1.routes import routers as v1_routers
+from app.api.pages import router as pages_router
 from app.core.config import configs
 from app.core.container import Container
 
-# 1. Создаем кастомные метрики Prometheus
-# Gauge — тип метрики, которая может как увеличиваться, так и уменьшаться
 MEMORY_USAGE_GAUGE = Gauge("app_memory_usage_bytes", "Объем потребляемой памяти процессом в байтах")
 CONCURRENT_REQUESTS_GAUGE = Gauge("app_concurrent_requests_count", "Число одновременных запросов в данный момент")
+
+
+async def _hygiene_loop(container: Container):
+    while True:
+        try:
+            await asyncio.sleep(60 * 60 * 24)  # раз в сутки
+            hygiene_service = container.hygiene_service()
+            hygiene_service.archive_old_vacancies(days=90)
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            pass
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Связываем AIService с ParserService (вариант C: фоновое извлечение навыков)
+    parser_svc = app.container.parser_service()
+    ai_svc = app.container.ai_service()
+    parser_svc.set_ai_service(ai_svc)
+
+    hygiene_task = asyncio.create_task(_hygiene_loop(app.container))
+    yield
+    # Stop parser scheduler if running
+    try:
+        scheduler = app.container.parser_scheduler()
+        scheduler.stop()
+    except Exception:
+        pass
+    hygiene_task.cancel()
+    try:
+        await hygiene_task
+    except asyncio.CancelledError:
+        pass
+
 
 def create_app() -> FastAPI:
     container = Container()
     app = FastAPI(
         title=configs.PROJECT_NAME,
         version="1.0.0",
+        lifespan=lifespan,
     )
-    app.container = container
+    app.container: Container = container # type: ignore[attr-defined]
 
     if configs.BACKEND_CORS_ORIGINS:
         app.add_middleware(
@@ -31,31 +68,26 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
+    # HTML pages at root
+    app.include_router(pages_router)
+    # API endpoints
     app.include_router(v1_routers, prefix=configs.API_V1_STR)
 
-    # 2. Настраиваем middleware для подсчета одновременных запросов и памяти
     @app.middleware("http")
     async def monitor_performance(request, call_next):
-        # Увеличиваем счетчик активных запросов
         CONCURRENT_REQUESTS_GAUGE.inc()
         try:
-            # Обновляем показатель памяти текущего процесса
             process = psutil.Process(os.getpid())
             MEMORY_USAGE_GAUGE.set(process.memory_info().rss)
-            
             response = await call_next(request)
             return response
         finally:
-            # После завершения запроса уменьшаем счетчик
             CONCURRENT_REQUESTS_GAUGE.dec()
 
-    # 3. Инициализируем автоматический сборщик (время ответа, коды ошибок и т.д.)
-    # Современная инициализация без устаревших параметров
     instrumentator = Instrumentator()
-    
-    # Привязываем к приложению и создаем эндпоинт /metrics
     instrumentator.instrument(app).expose(app, endpoint="/metrics")
 
     return app
+
 
 app = create_app()
