@@ -15,15 +15,15 @@ from app.services.user_service import UserService
 from app.services.skill_service import SkillService
 from app.services.vacancy_service import VacancyService
 from app.services.application_service import ApplicationService
-from app.services.user_skills_service import UserSkillsService
-from app.services.ai_service import AIService
 from app.services.parser_service import ParserService
 from app.services.parser_scheduler import ParserScheduler
+from app.services.ai_service import AIService
 from app.services.analytics_service import AnalyticsService
 from app.services.hygiene_service import HygieneService
+from app.services.user_skills_service import UserSkillsService
+
 
 class Container(containers.DeclarativeContainer):
-    # Указываем модули, куда dependency_injector будет внедрять зависимости
     wiring_config = containers.WiringConfiguration(
         modules=[
             "app.api.v1.endpoints.auth",
@@ -39,107 +39,50 @@ class Container(containers.DeclarativeContainer):
         ]
     )
 
-    # Фабрика сессий базы данных (передаем метод session_factory из db_instance)
     session_factory = providers.Object(db_instance._session_factory)
 
-    # Репозитории
-    user_repository = providers.Factory(
-        UserRepository,
-        session_factory=session_factory,
-    )
+    # Repositories
+    user_repository = providers.Factory(UserRepository, session_factory=session_factory)
+    company_repository = providers.Factory(CompanyRepository, session_factory=session_factory)
+    skill_repository = providers.Factory(SkillRepository, session_factory=session_factory)
+    vacancy_repository = providers.Factory(VacancyRepository, session_factory=session_factory)
+    application_repository = providers.Factory(ApplicationRepository, session_factory=session_factory)
+    user_skills_repository = providers.Factory(UserSkillsRepository, session_factory=session_factory)
+    vacancy_skills_repository = providers.Factory(VacancySkillsRepository, session_factory=session_factory)
 
-    company_repository = providers.Factory(
-        CompanyRepository,
-        session_factory=session_factory,
-    )
-
-    skill_repository = providers.Factory(
-        SkillRepository,
-        session_factory=session_factory,
-    )
-
-    vacancy_repository = providers.Factory(
-        VacancyRepository,
-        session_factory=session_factory,
-    )
-
-    application_repository = providers.Factory(
-        ApplicationRepository,
-        session_factory=session_factory,
-    )
-
-    user_skills_repository = providers.Factory(
-        UserSkillsRepository, 
-        session_factory=session_factory)
-
-
-    vacancy_skills_repository = providers.Factory(
-        VacancySkillsRepository,
-        session_factory=session_factory
-    )
-
-    # Сервисы
-    user_service = providers.Factory(
-        UserService,
-        repository=user_repository,
-    )
-
-    auth_service = providers.Factory(
-        AuthService,
-        repository=user_repository,
-    )
-
-    company_service = providers.Factory(
-        CompanyService,
-        repository=company_repository,
-    )
-
-    skill_service = providers.Factory(
-        SkillService,
-        repository=skill_repository,
-    )
-
+    # Services
+    user_service = providers.Factory(UserService, repository=user_repository)
+    auth_service = providers.Factory(AuthService, repository=user_repository)
+    company_service = providers.Factory(CompanyService, repository=company_repository)
+    skill_service = providers.Factory(SkillService, repository=skill_repository)
     vacancy_service = providers.Factory(
         VacancyService,
         repository=vacancy_repository,
         user_skills_repository=user_skills_repository,
         vacancy_skills_repository=vacancy_skills_repository,
     )
+    application_service = providers.Factory(ApplicationService, repository=application_repository)
 
-    application_service = providers.Factory(
-        ApplicationService,
-        repository=application_repository,
-    )
-
-    user_skills_service = providers.Factory(
-        UserSkillsService,
-        user_skills_repository=user_skills_repository,
-        skill_repository=skill_repository,
-    )
-
-    ai_service = providers.Factory(
-        AIService,
-        skill_repository=skill_repository,
-        vacancy_skills_repository=vacancy_skills_repository,
-    )
-
-    parser_service = providers.Factory(
+    # Parser: Singleton so start/stop manage the same task
+    parser_service = providers.Singleton(
         ParserService,
         vacancy_repository=vacancy_repository,
         company_repository=company_repository,
     )
-
-    parser_scheduler = providers.Factory(
+    parser_scheduler = providers.Singleton(
         ParserScheduler,
         parser_service=parser_service,
     )
 
-    analytics_service = providers.Factory(
-        AnalyticsService,
-        session_factory=session_factory,
+    ai_service = providers.Singleton(
+        AIService,
+        skill_repository=skill_repository,
+        vacancy_skills_repository=vacancy_skills_repository,
     )
-
-    hygiene_service = providers.Factory(
-        HygieneService,
-        vacancy_repository=vacancy_repository
+    analytics_service = providers.Factory(AnalyticsService, session_factory=session_factory)
+    hygiene_service = providers.Factory(HygieneService, vacancy_repository=vacancy_repository)
+    user_skills_service = providers.Factory(
+        UserSkillsService,
+        user_skills_repository=user_skills_repository,
+        skill_repository=skill_repository,
     )
