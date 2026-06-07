@@ -10,10 +10,10 @@ from app.services.skill_service import SkillService
 
 router = APIRouter(
     prefix="/skill", 
-    tags=["skill"], 
-    dependencies=[Depends(JWTBearer())]
+    tags=["skill"]
 )
 
+_auth = [Depends(JWTBearer())]
 
 @router.get("", response_model=FindSkillResult)
 @inject
@@ -35,7 +35,7 @@ async def get_skill(
     return service.get_by_id(skill_id)
 
 
-@router.post("", response_model=Skill)
+@router.post("", response_model=Skill, dependencies=_auth)
 @inject
 async def create_skill(
     skill: SkillCreate,
@@ -45,7 +45,7 @@ async def create_skill(
     return service.add(skill)
 
 
-@router.patch("/{skill_id}", response_model=Skill)
+@router.patch("/{skill_id}", response_model=Skill, dependencies=_auth)
 @inject
 async def update_skill(
     skill_id: int,
@@ -56,8 +56,7 @@ async def update_skill(
     return service.patch(skill_id, skill)
 
 
-
-@router.delete("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=_auth)
 @inject
 async def delete_skill(
     skill_id: int,

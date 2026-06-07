@@ -10,10 +10,10 @@ from app.services.vacancy_service import VacancyService
 
 router = APIRouter(
     prefix="/vacancy", 
-    tags=["vacancy"], 
-    dependencies=[Depends(JWTBearer())]
+    tags=["vacancy"]
 )
 
+_auth = [Depends(JWTBearer())]
 
 @router.get("", response_model=FindVacancyResult)
 @inject
@@ -35,7 +35,7 @@ async def get_vacancy(
     return service.get_by_id(vacancy_id)
 
 
-@router.post("", response_model=Vacancy)
+@router.post("", response_model=Vacancy, dependencies=_auth)
 @inject
 async def create_vacancy(
     vacancy: VacancyCreate,
@@ -45,7 +45,7 @@ async def create_vacancy(
     return service.add(vacancy)
 
 
-@router.patch("/{vacancy_id}", response_model=Vacancy)
+@router.patch("/{vacancy_id}", response_model=Vacancy, dependencies=_auth)
 @inject
 async def update_vacancy(
     vacancy_id: int,
@@ -56,8 +56,7 @@ async def update_vacancy(
     return service.patch(vacancy_id, vacancy)
 
 
-
-@router.delete("/{vacancy_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{vacancy_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=_auth)
 @inject
 async def delete_vacancy(
     vacancy_id: int,

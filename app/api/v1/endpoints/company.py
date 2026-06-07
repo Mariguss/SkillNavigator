@@ -10,9 +10,10 @@ from app.services.company_service import CompanyService
 
 router = APIRouter(
     prefix="/company", 
-    tags=["company"], 
-    dependencies=[Depends(JWTBearer())]
+    tags=["company"]
 )
+
+_auth = [Depends(JWTBearer())]
 
 
 @router.get("", response_model=FindCompanyResult)
@@ -35,7 +36,7 @@ async def get_company(
     return service.get_by_id(company_id)
 
 
-@router.post("", response_model=Company)
+@router.post("", response_model=Company, dependencies=_auth)
 @inject
 async def create_company(
     company: CompanyCreate,
@@ -45,7 +46,7 @@ async def create_company(
     return service.add(company)
 
 
-@router.patch("/{company_id}", response_model=Company)
+@router.patch("/{company_id}", response_model=Company, dependencies=_auth)
 @inject
 async def update_company(
     company_id: int,
@@ -57,7 +58,7 @@ async def update_company(
 
 
 
-@router.delete("/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{company_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=_auth)
 @inject
 async def delete_company(
     company_id: int,
