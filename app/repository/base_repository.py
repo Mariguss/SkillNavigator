@@ -23,8 +23,9 @@ class BaseRepository:
                 if ordering.startswith("-")
                 else getattr(self.model, ordering).asc()
             )
-            page = schema_as_dict.get("page", configs.PAGE)
-            page_size = schema_as_dict.get("page_size", configs.PAGE_SIZE)
+            page = int(schema_as_dict.get("page") or configs.PAGE)
+            page_size_raw = schema_as_dict.get("page_size") or configs.PAGE_SIZE
+            page_size = page_size_raw if page_size_raw == "all" else int(page_size_raw)
             filter_options = dict_to_sqlalchemy_filter_options(self.model, schema.model_dump(exclude_none=True))
             query = session.query(self.model)
             
@@ -96,5 +97,10 @@ class BaseRepository:
             object = session.query(self.model).filter(self.model.id == id).first()
             if not object:
                 raise NotFoundError(detail=f"not found id : {id}")
-            session.delete(object)
-            session.commit()
+            try:
+                session.delete(object)
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                raise DuplicatedError(detail="Cannot delete: record is referenced by other data. Remove related records first.")
+
