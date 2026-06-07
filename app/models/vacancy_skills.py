@@ -1,6 +1,6 @@
 from app.models.base_model import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
 
 from typing import TYPE_CHECKING  
 
@@ -10,9 +10,11 @@ if TYPE_CHECKING:
 
 class VacancySkills(Base):
     __tablename__ = "vacancy_skills"
+    __table_args__ = (UniqueConstraint("vacancy_id", "skill_id", name="uq_vacancy_skill"),)
 
-    vacancy_id: Mapped[int] = mapped_column(ForeignKey("vacancy.id"),primary_key=True)
-    skill_id: Mapped[int] = mapped_column(ForeignKey("skill.id"),primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    vacancy_id: Mapped[int] = mapped_column(ForeignKey("vacancy.id"), nullable=False)
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skill.id"), nullable=False)
 
     skill: Mapped["Skill"] = relationship("Skill", back_populates="vacancy_skills")
     vacancy: Mapped["Vacancy"] = relationship("Vacancy", back_populates="vacancy_skills")

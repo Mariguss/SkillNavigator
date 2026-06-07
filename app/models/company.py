@@ -13,4 +13,8 @@ class Company(BaseModelCreatedUpdated):
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
     site_url: Mapped[str | None] = mapped_column(nullable=True)
 
-    vacancies: Mapped[List["Vacancy"]] = relationship("Vacancy", back_populates="company")
+    vacancies: Mapped[List["Vacancy"]] = relationship(
+        "Vacancy", 
+        back_populates="company",
+        cascade="all, delete-orphan"
+    )

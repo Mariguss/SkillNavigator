@@ -19,8 +19,9 @@ class Vacancy(BaseModelCreatedUpdated):
     is_active: Mapped[bool] = mapped_column(default=True)
 
     company: Mapped["Company"] = relationship("Company", back_populates="vacancies")
-    applications: Mapped[List["Application"]] = relationship("Application", back_populates="vacancy")
-    vacancy_skills: Mapped[List["VacancySkills"]] = relationship("VacancySkills", back_populates="vacancy")
-    
-
-
+    applications: Mapped[List["Application"]] = relationship(
+        "Application", back_populates="vacancy", cascade="all, delete-orphan"
+    )
+    vacancy_skills: Mapped[List["VacancySkills"]] = relationship(
+        "VacancySkills", back_populates="vacancy", cascade="all, delete-orphan"
+    )
