@@ -20,7 +20,6 @@ _auth = [Depends(JWTBearer())]
 async def get_vacancy_list(
     find_query: FindVacancy = Depends(),
     service: VacancyService = Depends(Provide[Container.vacancy_service]),
-    current_user: User = Depends(get_current_user),
 ):
     return service.get_list(find_query)
 
@@ -30,7 +29,6 @@ async def get_vacancy_list(
 async def get_vacancy(
     vacancy_id: int,
     service: VacancyService = Depends(Provide[Container.vacancy_service]),
-    current_user: User = Depends(get_current_super_user),
 ):
     return service.get_by_id(vacancy_id)
 

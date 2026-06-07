@@ -6,6 +6,8 @@ from app.api.v1.endpoints.skill import router as skill_router
 from app.api.v1.endpoints.vacancy import router as vacancy_router
 from app.api.v1.endpoints.application import router as application_router
 from app.api.v1.endpoints.user_skills import router as user_skills_router
+from app.api.v1.endpoints.parser import router as parser_router
+from app.api.v1.endpoints.analytics import router as analytics_router
 
 routers = APIRouter()
 
@@ -16,4 +18,7 @@ routers.include_router(skill_router)
 routers.include_router(vacancy_router)
 routers.include_router(application_router)
 routers.include_router(user_skills_router)
+routers.include_router(parser_router)
+routers.include_router(analytics_router)
+
 

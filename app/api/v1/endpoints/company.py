@@ -21,7 +21,6 @@ _auth = [Depends(JWTBearer())]
 async def get_company_list(
     find_query: FindCompany = Depends(),
     service: CompanyService = Depends(Provide[Container.company_service]),
-    current_user: User = Depends(get_current_user),
 ):
     return service.get_list(find_query)
 
@@ -31,7 +30,6 @@ async def get_company_list(
 async def get_company(
     company_id: int,
     service: CompanyService = Depends(Provide[Container.company_service]),
-    current_user: User = Depends(get_current_super_user),
 ):
     return service.get_by_id(company_id)
 
