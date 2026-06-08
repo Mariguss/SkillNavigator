@@ -7,9 +7,8 @@ from app.schemas.skill_schema import SkillCreate, FindSkill
 from app.schemas.ai_schema import ExtractedSkill, SkillExtractionResult
 
 
-_SYSTEM_PROMPT = """
-You are a technical recruiter assistant.
-Analyze the job vacancy text and extract ALL mentioned skills and technologies.
+_SYSTEM_PROMPT = """You are a technical recruiter assistant.
+Analyze the job vacancy text and extract concrete, named skills and technologies — not generic concepts.
 
 Return ONLY a valid JSON object in this exact format, no other text:
 {"skills": [{"name": "Python", "type": "hard"}, {"name": "Docker", "type": "tool"}, {"name": "Communication", "type": "soft"}]}
@@ -17,12 +16,31 @@ Return ONLY a valid JSON object in this exact format, no other text:
 Type rules:
 - "hard"  — technical knowledge: programming languages, frameworks, libraries, algorithms, protocols
 - "soft"  — interpersonal/business skills: communication, teamwork, leadership, time management
-- "tool"  — specific software/platforms/services: Docker, Jira, AWS, GitHub, Figma, PostgreSQL
+- "tool"  — specific named software/platforms/services: Docker, Jira, AWS, GitHub, Figma, PostgreSQL
+
+DO NOT extract generic/abstract concepts that are not concrete technologies — e.g. "Database", "Authorization",
+"Authentication", "Web Services", "Architecture", "Testing", "Development". Only extract them if a SPECIFIC
+named technology is mentioned (e.g. "PostgreSQL" instead of "Database", "OAuth2" instead of "Authorization").
+
+Naming rules (critical for de-duplication — follow exactly):
+- Use the canonical, well-known spelling: "JavaScript" (not "Javascript" or "JS"), "PostgreSQL" (not "Postgres"),
+  "Kubernetes" (not "K8s"), "Node.js" (not "NodeJS" or "Node JS")
+- Write common acronyms fully uppercase: "REST", "SQL", "CI/CD", "API", "HTML", "CSS", "XML", "JSON"
+- Write multi-word technology names with each significant word capitalized: "Machine Learning", "Time Management"
+- Never output the same technology twice under different spellings or with/without suffixes
+  (pick ONE canonical form, e.g. either "REST" or "REST API", not both)
+
+Examples:
+Input: "Ищем Python-разработчика. Нужны: Django, PostgreSQL, Docker, REST API, умение работать в команде."
+Output: {"skills": [{"name": "Python", "type": "hard"}, {"name": "Django", "type": "hard"}, {"name": "PostgreSQL", "type": "tool"}, {"name": "Docker", "type": "tool"}, {"name": "REST", "type": "hard"}, {"name": "Teamwork", "type": "soft"}]}
+
+Input: "Опыт работы с Kafka, RabbitMQ, знание SQL, ООП, желателен английский язык, грамотная речь."
+Output: {"skills": [{"name": "Kafka", "type": "tool"}, {"name": "RabbitMQ", "type": "tool"}, {"name": "SQL", "type": "hard"}, {"name": "OOP", "type": "hard"}, {"name": "English", "type": "soft"}, {"name": "Communication", "type": "soft"}]}
 
 Rules:
-- Each skill name must be concise (1-4 words), properly capitalized
-- Do not duplicate skills
-- Extract at least the most important 5-15 skills
+- Each skill name must be concise (1-4 words) and use the canonical spelling described above
+- Do not duplicate skills, and do not output near-duplicates with different spelling/casing
+- Extract the 5-15 most important and concrete skills — fewer precise skills is better than many vague ones
 - Output ONLY the JSON, nothing else
 """
 
