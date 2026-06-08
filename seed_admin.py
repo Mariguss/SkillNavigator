@@ -16,7 +16,7 @@ def main():
         admin = User(
             login="admin",
             email="admin@navigator.ru",
-            password_hash=get_password_hash("super_secure_password"),
+            password_hash=get_password_hash("admin"),
             is_superuser=True
         )
         session.add(admin)
