@@ -14,7 +14,6 @@ class Configs(BaseSettings):
     API: str = "/api"
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "skillnavigator"
-    API_HH_RU: str = "https://hh.ru"
 
     ENV_DATABASE_MAPPER: dict = {
         "prod": "fca",
@@ -39,6 +38,7 @@ class Configs(BaseSettings):
 
     BACKEND_CORS_ORIGINS: List[str] = []
 
+    DATABASE_URL: str | None = os.getenv("DATABASE_URL")
     DB: str = os.getenv("DB", "sqlite")
     DB_USER: str | None = os.getenv("DB_USER")
     DB_PASSWORD: str | None = os.getenv("DB_PASSWORD")
@@ -52,6 +52,8 @@ class Configs(BaseSettings):
 
     @property
     def DATABASE_URI(self) -> str:
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
         if self.DB == "sqlite":
             return "sqlite:///./test.db"
         db_engine = self.DB_ENGINE_MAPPER.get(self.DB, "postgresql")
