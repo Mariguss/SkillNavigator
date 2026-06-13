@@ -23,3 +23,6 @@ class VacancyService(BaseService):
             return 0.0
         matched = user_skill_ids & vacancy_skill_ids
         return round(len(matched) / len(vacancy_skill_ids) * 100, 1)
+    # def archive_old_vacancies(self, days: int = 90) -> dict:
+    #     count = self.repository.archive_old_vacancies(days=days)
+    #     return {"archived": count, "days_threshold": days}

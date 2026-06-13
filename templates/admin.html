@@ -38,11 +38,11 @@
       <i class="bi bi-play-circle me-1"></i>Запустить парсер 
     </button>
   </li>
-  <li class="nav-item ms-auto">
+  <!-- <li class="nav-item ms-auto">
     <button class="nav-link text-info" onclick="statusParser()">
       <i class="bi bi-info-circle me-1"></i>Статус парсера
     </button>
-  </li>
+  </li> -->
 </ul>
 
 <!-- Users -->
@@ -277,10 +277,6 @@ async function loadAdminVacancies(page=1) {
       <td>${v.is_active ? '<span class="badge bg-success">Активна</span>' : '<span class="badge bg-secondary">Архив</span>'}</td>
       <td class="text-muted small">${new Date(v.created_at).toLocaleDateString('ru')}</td>
       <td>
-        <button class="btn btn-sm btn-outline-info" id="ai-btn-${v.id}"
-                onclick="extractSkillsAI(${v.id})" title="Извлечь навыки через ИИ">
-          <i class="bi bi-robot"></i>
-        </button>
         <button class="btn btn-sm btn-outline-warning ms-1" onclick="toggleVacancy(${v.id},${v.is_active})">
           <i class="bi bi-${v.is_active?'archive':'check2-circle'}"></i>
         </button>
@@ -473,11 +469,11 @@ async function runParser() {
   else showToast('Ошибка запуска парсера','danger');
 }
 
-async function statusParser() {
-  const r = await apiFetch('/parser/status', { method:'GET' });
-  if (r&&r.ok) { const d=await r.json(); showToast(`Статус парсера: ${d.status||'ok'}`); }
-  else showToast('Ошибка получения статуса парсера','danger');
-}
+// async function statusParser() {
+//   const r = await apiFetch('/parser/status', { method:'GET' });
+//   if (r&&r.ok) { const d=await r.json(); showToast(`Статус парсера: ${d.status||'ok'}`); }
+//   else showToast('Ошибка получения статуса парсера','danger');
+// }
 
 loadUsers();
 </script>

@@ -1,6 +1,6 @@
 from app.models.base_model import BaseModelCreatedUpdated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy import Text
 
 from typing import TYPE_CHECKING  
@@ -11,6 +11,10 @@ if TYPE_CHECKING:
 
 class Application(BaseModelCreatedUpdated):
     __tablename__ = "application"
+    __table_args__ = (
+        # Ensure that a book can only be associated with a genre once        
+        UniqueConstraint("user_id", "vacancy_id", name="uix_user_vacancy"),
+    )
     
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
     vacancy_id: Mapped[int] = mapped_column(ForeignKey("vacancy.id"), nullable=False)

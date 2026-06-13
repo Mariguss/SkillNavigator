@@ -63,6 +63,6 @@ class ParserScheduler:
             except Exception as exc:
                 self._last_result = {"error": str(exc)}
             try:
-                await asyncio.sleep(self._interval_minutes * 60)
+                await asyncio.sleep(self._interval_minutes * 10)
             except asyncio.CancelledError:
                 break
