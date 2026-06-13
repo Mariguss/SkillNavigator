@@ -38,6 +38,9 @@
       <i class="bi bi-play-circle me-1"></i>Запустить парсер 
     </button>
   </li>
+  <button class="nav-link text-warning" onclick="archiveVacancies()">
+    <i class="bi bi-archive"></i> Архивировать старые
+  </button>
   <!-- <li class="nav-item ms-auto">
     <button class="nav-link text-info" onclick="statusParser()">
       <i class="bi bi-info-circle me-1"></i>Статус парсера
@@ -474,6 +477,15 @@ async function runParser() {
 //   if (r&&r.ok) { const d=await r.json(); showToast(`Статус парсера: ${d.status||'ok'}`); }
 //   else showToast('Ошибка получения статуса парсера','danger');
 // }
+
+async function archiveVacancies() {
+  const r = await apiFetch('/parser/archive?days=3', { method: 'POST' });
+  if (r && r.ok) {
+    const d = await r.json();
+    showToast(`Архивировано: ${d.archived}`, 'success');
+    loadAdminVacancies(vPage);
+  }
+}
 
 loadUsers();
 </script>

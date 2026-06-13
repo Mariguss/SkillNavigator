@@ -19,9 +19,10 @@ CONCURRENT_REQUESTS_GAUGE = Gauge("app_concurrent_requests_count", "Число �
 async def _hygiene_loop(container: Container):
     while True:
         try:
-            await asyncio.sleep(60*60)  # раз в сутки 60 * 60 * 24 
             hygiene_service = container.hygiene_service()
             hygiene_service.archive_old_vacancies(days=3)
+            await asyncio.sleep(60*60)  # раз в сутки 60 * 60 * 24 
+
         except asyncio.CancelledError:
             break
         except Exception:
@@ -34,6 +35,9 @@ async def lifespan(app: FastAPI):
     parser_svc = app.container.parser_service()
     ai_svc = app.container.ai_service()
     parser_svc.set_ai_service(ai_svc)
+
+    scheduler = app.container.parser_scheduler()
+    scheduler.start(interval_minutes=10)
 
     hygiene_task = asyncio.create_task(_hygiene_loop(app.container))
     yield
