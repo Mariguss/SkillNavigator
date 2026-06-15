@@ -1,11 +1,15 @@
 # SkillNavigator
 
-Аккаунты для проверки:
+**Аккаунты для проверки:**
 
-Администратор 
+- Администратор 
+
 login: admin
+
 password: admin
 
-Пользователь:
+- Пользователь
+
 login: manhatty
+
 password: 123456
