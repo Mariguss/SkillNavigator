@@ -207,7 +207,7 @@ async function loadVacancies(page = 1) {
     });
   }
 
-  document.getElementById('vacancy-count').textContent = `Найдено: ${list.length}`;
+  document.getElementById('vacancy-count').textContent = `Вакансий на странице: ${list.length}`;
   renderVacancies(list);
   if (useAll) {
     document.getElementById('pagination').innerHTML = '';

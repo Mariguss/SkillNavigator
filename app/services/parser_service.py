@@ -99,7 +99,7 @@ class ParserService:
                     )
                     added += 1
 
-                    # Вариант C: запускаем AI-извлечение навыков фоново, не блокируя парсер
+                    # запускаем AI-извлечение навыков фоново, не блокируя парсер
                     if self._ai_service is not None and raw_text:
                         vacancy_id = vacancy.id
                         ai_svc = self._ai_service
