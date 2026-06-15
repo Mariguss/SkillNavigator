@@ -1,6 +1,7 @@
 # SkillNavigator
 
 Аккаунты для проверки:
+
 Администратор 
 login: admin
 password: admin
